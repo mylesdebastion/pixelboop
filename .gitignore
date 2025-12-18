@@ -1,0 +1,51 @@
+# BMad & Claude Code directories
+.bmad/
+.bmad-core/
+.claude/
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# iOS / Xcode
+*.xcworkspace
+xcuserdata/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+.build/
+
+# Web / TypeScript
+*.tsbuildinfo
+.cache/
+.parcel-cache/
+coverage/
+
+# Testing
+.nyc_output/
