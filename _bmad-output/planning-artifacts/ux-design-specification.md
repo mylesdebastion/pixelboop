@@ -231,6 +231,8 @@ Unlike traditional music software where effort → learning → music theory →
 - Small screen optimization (gesture interpretation forgiving of imprecise touch on mobile displays)
 - Real-time audio synthesis with minimal latency (<20ms web, <10ms iOS)
 - 60 FPS visual rendering synchronized with audio playback
+- Responsive menu column adapts to horizontal space (collapsed on compact devices, persistent on spacious devices)
+- Vertical canvas fill optimization (pixel grid scales to maximize vertical screen space)
 
 **Input Modality:**
 - Touch-primary design with mouse support as secondary
@@ -273,6 +275,9 @@ The moment where a user's first gesture produces a musically satisfying pattern 
 
 **Discovery Dopamine:**
 The moment where a user accidentally discovers a hidden gesture (hold-drag for sustain, scrub-to-clear, double-swipe-undo) and realizes "there's more depth here than I thought." This creates desire to continue exploring rather than abandoning after surface understanding.
+
+**Menu Discovery:**
+The moment where a user taps the collapsed menu column and discovers the full control panel expands smoothly. This validates two promises: (1) the interface respects screen space (grid-only immersion when menu collapsed), and (2) full controls are always accessible without obscuring the creative canvas. The collapse-back gesture reinforces user control over their workspace.
 
 **Personal Voice Emergence:**
 The moment where a user creates something that sounds uniquely theirs rather than generic app output. This happens through gesture mastery - the user has internalized the gesture vocabulary and uses it fluently to express musical ideas.
@@ -620,6 +625,13 @@ Maintain sensory engagement over feature count. Better to have fewer gestures th
    - **Pattern**: System prevents musically incorrect actions
    - **Applies to PixelBoop**: Scale snapping, chord voicing, intelligent harmony
    - **Benefit**: First gesture sounds good, encourages continued exploration
+
+5. **Adaptive Control Layout** (iOS Split View, Procreate sidebars)
+   - **Pattern**: UI chrome adapts to available space without obscuring creative canvas
+   - **Applies to PixelBoop**: Collapsible menu column (icon-only → full controls)
+   - **Tap interaction**: Single tap toggles collapsed ↔ expanded state
+   - **Hardware compatible**: No edge-swipe gestures (works with grid controllers)
+   - **Benefit**: Grid-only immersion when collapsed, full controls accessible when needed, maximizes vertical canvas space
 
 #### **Visual Patterns:**
 
@@ -1534,11 +1546,16 @@ PixelBoop maintains **pixel aspect ratio** across all devices:
 | **iPad Mini** | 768 × 1024pt | ~17.5 × 17.5pt | 770 × 420pt |
 | **iPad Pro 12.9"** | 1024 × 1366pt | ~23.3 × 23.3pt | 1025 × 559pt |
 
-**Scaling Rules:**
-- **Pixel size** = `min(screen_width ÷ 44, screen_height ÷ 24)`
-- **Centering**: Grid centered on screen (letterbox if aspect mismatch)
+**Scaling Rules (Updated 2026-01-03):**
+- **Pixel size** = `screen_height ÷ 24` (fills vertical canvas 100%)
+- **Grid width** = `44 × pixel_size + 43 × 1px` (gaps between pixels)
+- **Menu column**: Remaining horizontal space (collapsed ~60px, expanded ~250px)
+- **Layout**: `[44-col grid] + [1px separator] + [menu column]`
 - **No zoom**: Users cannot pinch-to-zoom (would break pixel precision)
 - **Rotation**: Portrait only (landscape not supported—wrong aspect ratio)
+
+**Rationale for Vertical Fill:**
+Previous approach (`min(width, height)`) left black letterboxing. New approach maximizes vertical canvas space and uses horizontal space functionally for adaptive menu column, improving screen utilization across all device sizes.
 
 ---
 
@@ -2330,18 +2347,29 @@ The following visual patterns are suggested but require **manual human testing**
 | iPad Pro 11" | 834×1194 | Full grid, ~18px cells, landscape optimal |
 | iPad Pro 12.9" | 1024×1366 | Full grid, ~22px cells, landscape optimal |
 
-**Core Principle: Grid fills available space while maintaining square cells**
+**Core Principle: Grid fills vertical canvas 100%, menu column utilizes horizontal space (Updated 2026-01-03)**
 
 The 44×24 grid aspect ratio (~1.83:1) determines optimal orientation:
 - **iPhone**: Portrait mode maximizes grid cell size
 - **iPad**: Landscape mode utilizes screen real estate
 
-**Scaling Algorithm**
+**Scaling Algorithm (Updated 2026-01-03)**
 ```
-cellSize = min(screenWidth / 44, screenHeight / 24)
-gridWidth = cellSize × 44
-gridHeight = cellSize × 24
+// Vertical fill approach (FR102)
+cellSize = screenHeight / 24  // Maximize vertical canvas
+gridWidth = cellSize × 44 + 43 × 1  // Include gaps
+gridHeight = cellSize × 24 + 23 × 1
+
+// Menu column (FR103-107)
+menuWidth = screenWidth - gridWidth
+menuState = menuWidth > 250 ? "expanded" : "collapsed"
 ```
+
+**Menu Column Behavior:**
+- **Collapsed State** (~60px): Icon-only buttons, minimal intrusion
+- **Expanded State** (~250px): Full labeled controls
+- **Toggle**: Tap anywhere in menu column to expand/collapse
+- **Hardware Compatible**: No edge-swipe gestures
 
 **Touch Target Compliance**
 - Minimum cell size: 8×8px (achievable on all target devices)
@@ -2359,10 +2387,11 @@ gridHeight = cellSize × 24
 | Compact (iPhone) | Single-column, larger relative cells | ±1 cell |
 | Regular (iPad) | Full grid, optimal cell sizing | ±0.5 cell |
 
-**Orientation Handling**
-- iPhone: Lock to portrait OR scale grid smaller in landscape
+**Orientation Handling (Updated 2026-01-03)**
+- iPhone: Lock to portrait (vertical fill maximizes grid size)
 - iPad: Prefer landscape, support both orientations
-- Grid maintains aspect ratio; letterboxing fills remaining space with app background
+- Grid fills vertical canvas 100%; menu column fills remaining horizontal space
+- No letterboxing/pillarboxing (menu column replaces black bars)
 
 ---
 

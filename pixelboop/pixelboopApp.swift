@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct pixelboopApp: App {
+struct PixelBoopApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

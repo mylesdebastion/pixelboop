@@ -771,7 +771,7 @@ PixelBoop is a **mobile-first gesture-based music creation tool** with a phased 
 
 ### Visual Feedback & Interface
 
-- FR37: System can display a 44×24 pixel grid interface
+- FR37: System can display a 44×24 pixel grid interface that fills available vertical canvas space
 - FR38: System can render color-coded notes based on chromatic pitch
 - FR39: System can display a visual playhead during pattern playback
 - FR40: System can show dynamic status tooltips (BPM, scale, pattern length) using pixel font
@@ -813,6 +813,15 @@ PixelBoop is a **mobile-first gesture-based music creation tool** with a phased 
 - FR64: System can provide tactile feedback on note placement (iOS)
 - FR65: System can provide distinct haptic responses for different gesture types (iOS)
 - FR66: System can synchronize haptic pulses to beat during playback (iOS)
+
+### Responsive Interface & Menu System
+
+- FR102: System can scale pixel size to fill 100% of available vertical canvas height
+- FR103: System displays collapsible menu column adjacent to grid on devices with horizontal space
+- FR104: Users can expand/collapse menu column by tapping collapsed menu area
+- FR105: Menu column displays icon-only controls in collapsed state
+- FR106: Menu column displays full labeled controls in expanded state
+- FR107: Menu system works identically on hardware controllers (no edge-swipe gestures)
 
 ## App Store Compliance Requirements (iOS)
 

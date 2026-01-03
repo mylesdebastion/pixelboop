@@ -177,8 +177,16 @@ std::atomic<T>                // Lock-free only
 - Test web → iOS → web round-trip
 
 **Grid Constants (match web exactly):**
-- Columns: 44 (steps)
-- Rows: 24 (pitches)
+- Columns: 44 (col 0-43 = timeline steps)
+- Rows: 24 (row 0-23 = tracks/pitches)
+
+**Orientation-Independent Design (CRITICAL):**
+- ❌ NEVER use device-relative directions (up/down/left/right)
+- ✅ ALWAYS use grid coordinates (col, row)
+- ✅ App works in landscape (primary, like piano) AND portrait
+- ✅ Coordinates stay the same regardless of device orientation
+- ✅ "Horizontal drag" = movement along COLUMN axis
+- ✅ "Vertical drag" = movement along ROW axis
 
 **Gesture Thresholds:**
 - Tap: <300ms

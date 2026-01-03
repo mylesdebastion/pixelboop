@@ -266,11 +266,14 @@ PixelBoop/
 ├── ViewModels/
 │   ├── SequencerViewModel.swift        # Main sequencer state + playback control
 │   ├── GestureInterpreter.swift        # Gesture → musical notes algorithm
+│   ├── MenuViewModel.swift             # Menu state (collapsed/expanded) (FR102-107)
 │   └── PatternLibraryViewModel.swift   # Pattern save/load/browse
 ├── Views/
 │   ├── SequencerView.swift             # Main sequencer SwiftUI container
 │   ├── PixelGridView.swift             # UIViewRepresentable wrapper
 │   ├── PixelGridUIView.swift           # UIKit custom view (Core Graphics rendering)
+│   ├── MenuColumnView.swift            # Collapsible menu column UI (FR102-107)
+│   ├── ControlButtonView.swift         # Reusable control buttons for menu
 │   ├── ControlRowView.swift            # Play/stop, scale, BPM controls
 │   └── TooltipOverlay.swift            # Pixel-font tooltip rendering
 ├── Services/
@@ -305,6 +308,48 @@ PixelBoop/
 - Release: Full optimization (-O), assertions disabled, audio buffer 256 samples
 - Background Modes: Audio enabled (UIBackgroundModes)
 - Capabilities: None required for MVP (no push, no iCloud, no HealthKit)
+
+**Grid Specifications:**
+
+The 44×24 pixel grid is the core visual canvas for PixelBoop, with responsive sizing that fills vertical canvas space and an adaptive menu column system.
+
+```swift
+// Grid Constants
+let COLS = 44  // Timeline steps (vertical on portrait)
+let ROWS = 24  // Tracks/pitches (horizontal on portrait)
+let GAP_SIZE: CGFloat = 1.0  // 1px gaps between pixels
+let BACKGROUND_COLOR = UIColor(hex: "#0a0a0a")  // Dark background
+
+// Pixel Sizing Strategy (FR37, FR102)
+// OLD (Story 1.1): pixelSize = floor(min(availableWidth, availableHeight))
+// NEW (Sprint Change 2026-01-03): Fill vertical canvas 100%
+let pixelSize = floor(availableHeight / CGFloat(ROWS))  // Maximize vertical space
+let gridWidth = CGFloat(COLS) * pixelSize + CGFloat(COLS - 1) * GAP_SIZE
+let gridHeight = CGFloat(ROWS) * pixelSize + CGFloat(ROWS - 1) * GAP_SIZE
+
+// Menu Column Layout (FR103-107)
+let menuWidth = availableWidth - gridWidth  // Remaining horizontal space
+let collapsedMenuWidth: CGFloat = 60  // Icon-only column width
+let expandedMenuWidth: CGFloat = 250  // Full controls width
+
+// Layout: [44-col grid] + [1px separator] + [menu column]
+// Menu adapts: collapsed (compact devices) or expanded (spacious devices)
+```
+
+**Menu Column Interaction Pattern (FR104-107):**
+- **Collapsed State:** Single column (~60px) with icon-only buttons, vertically stacked
+- **Expanded State:** Multi-column (~250px) with full labeled controls
+- **Transition:** Tap anywhere in menu column to toggle collapsed ↔ expanded
+- **Hardware Compatibility:** No edge-swipe gestures (works with grid controllers)
+
+**Row Allocation (for reference):**
+- Row 0: Control buttons (may be deprecated in favor of menu column)
+- Row 1: Step markers
+- Rows 2-7: Melody track (6 rows)
+- Rows 8-13: Chords track (6 rows)
+- Rows 14-17: Bass track (4 rows)
+- Rows 18-21: Rhythm track (4 rows)
+- Rows 22-23: Pattern overview (2 rows)
 
 **Audio Architecture:**
 
@@ -645,12 +690,15 @@ PixelBoop/
 ├── ViewModels/
 │   ├── SequencerViewModel.swift              # FR12-19: Playback, state
 │   ├── GestureInterpreter.swift              # FR1-11: Gesture → notes
+│   ├── MenuViewModel.swift                   # FR102-107: Menu state (collapsed/expanded)
 │   ├── PatternLibraryViewModel.swift         # FR25-32: Save/load/browse
 │   └── HistoryManager.swift                  # FR33-36: 50-level undo/redo
 ├── Views/
 │   ├── SequencerView.swift                   # FR37-45: Main UI container
 │   ├── PixelGridView.swift                   # UIViewRepresentable wrapper
 │   ├── PixelGridUIView.swift                 # FR1-11: Touch handling (UIKit)
+│   ├── MenuColumnView.swift                  # FR102-107: Collapsible menu column UI
+│   ├── ControlButtonView.swift               # Reusable control buttons for menu
 │   ├── ControlRowView.swift                  # FR46-53: BPM, scale, controls
 │   ├── PatternLibraryView.swift              # FR25-32: Pattern browser
 │   └── TooltipOverlay.swift                  # FR37-45: Pixel-font overlays
@@ -713,11 +761,12 @@ PixelBoop/
 | Musical Intelligence (FR20-24) | MusicalConstants.swift, GestureInterpreter.swift | 5 |
 | Pattern Management (FR25-32) | PatternLibraryViewModel.swift, StorageService.swift | 8 |
 | History (FR33-36) | HistoryManager.swift | 4 |
-| Visual Feedback (FR37-45) | Views/*.swift | 9 |
+| Visual Feedback (FR37-45) | Views/*.swift, PixelGridUIView.swift | 9 |
 | Controls (FR46-53) | ControlRowView.swift, SequencerViewModel.swift | 8 |
 | Tracks (FR54-59) | Track.swift, SequencerViewModel.swift | 6 |
 | Offline/Storage (FR60-63) | StorageService.swift | 4 |
 | Haptics (FR64-66) | HapticsService.swift | 3 |
+| Responsive Interface (FR102-107) | MenuColumnView.swift, MenuViewModel.swift, PixelGridUIView.swift | 6 |
 
 ### Data Flow
 
@@ -763,17 +812,18 @@ Project structure supports all architectural decisions. Separate Audio/ folder f
 
 ### Requirements Coverage Validation ✅
 
-**Functional Requirements Coverage (66/66):**
+**Functional Requirements Coverage (72/72):**
 - FR1-11 (Gesture Recognition): GestureInterpreter.swift, PixelGridUIView.swift, GestureState.swift
 - FR12-19 (Audio Synthesis): Audio/*.cpp, AudioEngineService.swift
 - FR20-24 (Musical Intelligence): MusicalConstants.swift, GestureInterpreter.swift
 - FR25-32 (Pattern Management): PatternLibraryViewModel.swift, StorageService.swift
 - FR33-36 (History): HistoryManager.swift
-- FR37-45 (Visual Feedback): Views/*.swift
+- FR37-45 (Visual Feedback): Views/*.swift, PixelGridUIView.swift
 - FR46-53 (Controls): ControlRowView.swift, SequencerViewModel.swift
 - FR54-59 (Tracks): Track.swift, SequencerViewModel.swift
 - FR60-63 (Offline/Storage): StorageService.swift
 - FR64-66 (Haptics): HapticsService.swift
+- FR102-107 (Responsive Interface): MenuColumnView.swift, MenuViewModel.swift, PixelGridUIView.swift
 
 **Non-Functional Requirements Coverage (41+ addressed):**
 - NFR1 (60 FPS): CoreGraphics rendering + dirty rectangle optimization
@@ -935,7 +985,7 @@ Next steps:
 - [x] Structure aligns with all choices (MVVM folders + Audio/ separation)
 
 **✅ Requirements Coverage**
-- [x] All functional requirements are supported (66/66)
+- [x] All functional requirements are supported (72/72)
 - [x] All non-functional requirements are addressed (41+/41+)
 - [x] Cross-cutting concerns are handled (latency, compatibility, compliance)
 - [x] Integration points are defined (3 major boundaries)
