@@ -1,10 +1,10 @@
 ---
 project_name: 'pixelboop'
 user_name: 'Myles'
-date: '2026-01-02'
-sections_completed: ['technology_stack', 'language_rules', 'framework_rules', 'testing_rules', 'code_quality', 'critical_rules']
+date: '2026-01-03'
+sections_completed: ['technology_stack', 'language_rules', 'framework_rules', 'ui_rendering_architecture', 'testing_rules', 'code_quality', 'critical_rules']
 status: 'complete'
-rule_count: 60
+rule_count: 75
 optimized_for_llm: true
 ---
 
@@ -91,6 +91,63 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - `UIImpactFeedbackGenerator` for note placement
 - `UISelectionFeedbackGenerator` for navigation
 - Call `prepare()` before triggering
+
+### UI Rendering Architecture (CRITICAL - NON-NEGOTIABLE)
+
+**Pixel-Only UI Constraint:**
+- ❌ NEVER use SwiftUI Text, Image, Button, or any native UI components for app content
+- ❌ NEVER use SF Symbols (`Image(systemName:)`) for icons
+- ❌ NEVER overlay SwiftUI views on top of pixel grid
+- ❌ NEVER create separate View components for menu/controls (MenuView, ButtonView, etc.)
+- ✅ ALL visual elements rendered within unified `PixelGridUIView` using CoreGraphics
+- ✅ Icons rendered as pixel art patterns (e.g., play = 3×3 triangle pixels)
+- ✅ Text rendered using 3×5 pixel font (NOT native Text views)
+- ✅ Menu controls are leftmost columns of same pixel grid (NOT separate views)
+
+**Core Principle:**
+> "The grid IS the interface. Every pixel serves musical purpose. Zero chrome."
+
+**Architectural Pattern:**
+```
+PixelGridUIView (UIKit + CoreGraphics)
+├── Menu Columns (leftmost N columns, e.g., 1 col collapsed, 5 cols expanded)
+│   ├── Pixel art icons (play = triangle, stop = square, + = plus, - = minus)
+│   └── 3×5 pixel font labels (BPM, scale names, settings)
+├── 1px black divider (single pixel column separator)
+└── Sequencer Grid (44×24 main canvas)
+    ├── Note pixels (color-coded by pitch)
+    ├── Playhead (brightened vertical pixel column)
+    └── Ghost notes (dimmed pixel previews)
+
+SwiftUI Wrapper (UIViewRepresentable)
+└── State management ONLY (NO visual rendering)
+```
+
+**Rationale:**
+PixelBoop uses "100% Custom Pixel-Based Design System with zero UI elements outside the 44×24 pixel grid" (UX Design Specification). This creates:
+- Visual-audio equivalence (grid pixels = musical notes, 1:1 mapping)
+- Cross-platform consistency (web Canvas API ≡ iOS CoreGraphics)
+- Distinctive retro aesthetic (PICO-8 inspiration)
+- Pattern compatibility (JSON exports work between platforms)
+
+**Violation Detection - If You See These, It's WRONG:**
+- `Text("label")` → Should be 3×5 pixel font in CoreGraphics
+- `Image(systemName: "play.fill")` → Should be pixel art pattern
+- Separate `MenuColumnView`, `ControlButtonView` → Should be integrated into PixelGridUIView
+- `HStack`/`VStack` containing UI elements → Should be pixel columns/rows
+- Any UIKit/SwiftUI view overlaying the grid → Should be part of unified grid
+
+**Implementation Requirements:**
+- Single `PixelGridUIView.swift` renders ALL visual elements via `draw(_:)`
+- Menu width changes by adding/removing pixel columns (e.g., 1→5 columns)
+- All pixels use identical size/gaps (seamless integration)
+- 3×5 pixel font glyphs for A-Z, 0-9, symbols (♯, ♭, ▶, ■, +, -)
+- Pixel art icon patterns: 3×3 or 5×5 grids (play, stop, settings, etc.)
+
+**References:**
+- UX Design Specification: Design System Foundation (lines 759-920)
+- Architecture Document: Unified Pixel Grid (Story 1-1 implementation notes)
+- ADR 001: Pixel-Only UI Design System (docs/architectural-decisions/)
 
 ### Testing Rules
 
@@ -221,4 +278,4 @@ std::atomic<T>                // Lock-free only
 - Review quarterly for outdated rules
 - Remove rules that become obvious over time
 
-Last Updated: 2026-01-02
+Last Updated: 2026-01-03 (Added UI Rendering Architecture section after Story 1.2 architectural violation)
