@@ -319,6 +319,13 @@ PixelBoop succeeds across multiple user dimensions:
 - Clock source selection (internal/external MIDI clock)
 - Performance mode with accidental-clear protection
 
+**Lighting & Visual Output (Nice-to-Have):**
+- **WLED / sACN / Art-Net Output:** Stream pixel grid state to LED strips and panels in real-time. A physical LED matrix could mirror the 44×24 grid exactly, creating a stage backdrop that shows the music being created.
+- **DMX Lighting Control:** Trigger stage lighting fixtures based on track activity, BPM, note events, or playback position. Full stage lighting driven entirely by PixelBoop.
+- **Instrument LED Guides:** Output note data to LED strips attached to physical instruments (guitar fretboards, piano keys, drum pads) showing IRL musicians which notes to play in sync with the sequence.
+- **BPM/Track Visualizers:** Dedicated LED outputs for tempo pulse, track activity meters, or section indicators for stage monitoring.
+- **Protocol Support:** WLED (WiFi), sACN/E1.31 (network), Art-Net (network), DMX512 (wired via USB-DMX adapters).
+
 **Expanded Synthesis:**
 - Multiple oscillators, filters, effects (reverb, delay)
 - Audio input: sample your own sounds
