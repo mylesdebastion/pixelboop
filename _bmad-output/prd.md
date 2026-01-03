@@ -294,11 +294,18 @@ PixelBoop succeeds across multiple user dimensions:
 
 **MIDI & External Audio Connectivity (Core Phase 3 Goals):**
 - **MIDI Output per Track:** Each of the 4 tracks (melody, chords, bass, rhythm) can independently output MIDI to external hardware synths, software instruments, or DAWs. Users can trigger their favorite external sounds while using PixelBoop's gesture interface for composition.
+- **Per-Track MIDI Channel Selection:** Configurable TX/RX MIDI channel (1-16) for each track. Melody on Ch 1, chords on Ch 2, bass on Ch 3, rhythm on Ch 10 (drums), etc. Enables multi-timbral setups with a single MIDI connection.
 - **Bluetooth MIDI Output:** Wireless MIDI transmission to Bluetooth-capable synths, iOS devices running synth apps (e.g., Moog apps, Korg Gadget), and compatible hardware. Essential for cable-free live performance setups.
 - **USB MIDI Output:** Wired MIDI via Lightning/USB-C for reliable studio connections to audio interfaces, hardware synths, and DAWs.
 - **USB Audio Output:** Direct audio routing to external audio interfaces for professional monitoring and recording. Enables integration with studio setups without relying on device speakers.
-- **MIDI Input (Lower Priority):** Accept MIDI notes from external controllers, keyboards, or trigger pads to place notes on tracks. Enables alternative input methods beyond touch gestures - useful for users with hardware controllers or accessibility needs. Note: Gesture-based input remains primary; MIDI input is supplementary.
+- **MIDI Input (Lower Priority):** Accept MIDI notes from external controllers, keyboards, or trigger pads to place notes on tracks. Configurable input channel per track. Enables alternative input methods beyond touch gestures - useful for users with hardware controllers or accessibility needs. Note: Gesture-based input remains primary; MIDI input is supplementary.
 - **Bluetooth MIDI Input:** Receive MIDI from wireless controllers for live performance flexibility.
+
+**Global MIDI/Sync Controls:**
+- **MIDI Clock:** Send/receive MIDI clock for tempo sync with external gear. Configurable as clock source (master) or clock follower (slave).
+- **Transport Control:** MIDI start/stop/continue messages for synchronized playback with DAWs and hardware sequencers.
+- **Ableton Link:** Network-based tempo and phase sync with Ableton Live and other Link-enabled apps. Wireless jam sessions with multiple devices locked to the same tempo grid.
+- **Clock Source Selection:** Internal (PixelBoop master), External MIDI clock, or Ableton Link.
 
 **UX Challenge:** All MIDI/audio configuration must be achievable through the pixel-only interface. This requires creative solutions - potentially using the song overview row (22-23) or dedicated configuration patterns accessible via gesture combinations. No external settings screens.
 
@@ -315,9 +322,8 @@ PixelBoop succeeds across multiple user dimensions:
 
 **Live Performance Features:**
 - Scene launching and pattern switching
-- Ableton Link sync integration
-- Clock source selection (internal/external MIDI clock)
 - Performance mode with accidental-clear protection
+- Quick mute/solo per track during playback
 
 **Lighting & Visual Output (Nice-to-Have):**
 - **WLED / sACN / Art-Net Output:** Stream pixel grid state to LED strips and panels in real-time. A physical LED matrix could mirror the 44×24 grid exactly, creating a stage backdrop that shows the music being created.
