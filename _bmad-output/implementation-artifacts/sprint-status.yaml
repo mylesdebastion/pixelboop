@@ -1,0 +1,188 @@
+# Sprint Status Tracking for PixelBoop
+# Generated: 2026-01-02
+# This file tracks the development status of all epics and stories
+
+# generated: 2026-01-02
+# project: pixelboop
+# project_key: pixelboop
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-01-02
+project: pixelboop
+project_key: pixelboop
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # Epic 1: Instant Music Creation (5 stories)
+  epic-1: in-progress
+  1-1-render-44x24-pixel-grid-canvas: ready-for-dev
+  1-2-single-note-placement-with-tap-gesture: ready-for-dev
+  1-3-real-time-audio-synthesis-for-melody-notes: ready-for-dev
+  1-4-continuous-playback-loop-with-visual-playhead: ready-for-dev
+  1-5-color-coded-note-rendering-by-chromatic-pitch: ready-for-dev
+  epic-1-retrospective: optional
+
+  # Epic 2: Gesture Vocabulary for Musical Expression (8 stories)
+  epic-2: in-progress
+  2-1-accented-notes-with-hold-then-tap-gesture: ready-for-dev
+  2-2-arpeggios-with-horizontal-drag-gesture: backlog
+  2-3-chords-with-vertical-drag-gesture: backlog
+  2-4-melodic-phrases-with-diagonal-drag-gesture: backlog
+  2-5-sustained-notes-with-hold-and-drag-gesture: backlog
+  2-6-erase-steps-with-double-tap-gesture: backlog
+  2-7-clear-all-tracks-with-scrub-gesture: backlog
+  2-8-pattern-length-configuration-8-32-steps: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Musical Intelligence & Scale Snapping (5 stories)
+  epic-3: backlog
+  3-1-scale-selection-major-minor-pentatonic: backlog
+  3-2-root-note-selection-12-chromatic-notes: backlog
+  3-3-automatic-chord-voicing-for-vertical-gestures: backlog
+  3-4-bass-pattern-generation-root-and-fifth: backlog
+  3-5-musical-validity-enforcement-scale-snapping: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Multi-Track Composition (7 stories)
+  epic-4: backlog
+  4-1-four-independent-track-editing: backlog
+  4-2-multi-touch-gestures-on-different-tracks: backlog
+  4-3-track-mute-control: backlog
+  4-4-track-solo-control: backlog
+  4-5-rhythm-track-with-12-synthesized-drum-sounds: backlog
+  4-6-track-specific-content-creation-melody-chords-bass: backlog
+  4-7-per-track-volume-indicators: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Visual Feedback & Discovery System (6 stories)
+  epic-5: backlog
+  5-1-animated-playhead-during-playback: backlog
+  5-2-dynamic-status-tooltips-bpm-scale-length: backlog
+  5-3-gesture-specific-tooltips: backlog
+  5-4-tempo-synchronized-pulse-animations: backlog
+  5-5-ghost-notes-for-gesture-previews: backlog
+  5-6-step-markers-and-pattern-overview: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: Song Structure Intelligence (Basic MVP) (5 stories)
+  epic-6: backlog
+  6-1-pattern-density-analysis-for-section-recognition: backlog
+  6-2-section-visualization-in-bottom-overview-rows: backlog
+  6-3-intelligent-pattern-variation-copy-with-variation: backlog
+  6-4-gestural-section-navigation: backlog
+  6-5-basic-song-flow-suggestions: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Pattern Library & Export (7 stories)
+  epic-7: backlog
+  7-1-save-pattern-to-local-storage: backlog
+  7-2-auto-save-pattern-changes: backlog
+  7-3-browse-pattern-library: backlog
+  7-4-load-previously-saved-pattern: backlog
+  7-5-export-pattern-as-json-file: backlog
+  7-6-import-cross-platform-patterns: backlog
+  7-7-pattern-management-actions-rename-duplicate-delete: backlog
+  epic-7-retrospective: optional
+
+  # Epic 8: History & Reversibility (4 stories)
+  epic-8: backlog
+  8-1-50-level-undo-stack: backlog
+  8-2-redo-previously-undone-actions: backlog
+  8-3-double-swipe-left-gesture-for-undo: backlog
+  8-4-double-swipe-right-gesture-for-redo: backlog
+  epic-8-retrospective: optional
+
+  # Epic 9: Customization & Configuration (4 stories)
+  epic-9: backlog
+  9-1-bpm-control-60-200-bpm: backlog
+  9-2-keyboard-shortcuts-for-common-actions: backlog
+  9-3-ghost-note-visibility-toggle: backlog
+  9-4-preferences-persistence-across-sessions: backlog
+  epic-9-retrospective: optional
+
+  # Epic 10: iOS Native Polish & Integration (11 stories)
+  epic-10: backlog
+  10-1-haptic-feedback-on-note-placement: backlog
+  10-2-distinct-haptic-responses-per-gesture-type: backlog
+  10-3-beat-synchronized-haptic-pulses-during-playback: backlog
+  10-4-background-audio-playback: backlog
+  10-5-audio-session-interruption-handling: backlog
+  10-6-voiceover-accessibility-labels: backlog
+  10-7-dynamic-type-support-in-settings: backlog
+  10-8-wcag-2-1-aa-color-contrast-compliance: backlog
+  10-9-privacy-manifest-declaration: backlog
+  10-10-app-store-marketing-assets: backlog
+  10-11-testflight-beta-program: backlog
+  epic-10-retrospective: optional
+
+  # Epic 11: Offline-First Architecture (4 stories)
+  epic-11: backlog
+  11-1-complete-offline-functionality: backlog
+  11-2-local-pattern-storage-zero-cloud-dependency: backlog
+  11-3-zero-data-collection-and-tracking: backlog
+  11-4-in-memory-undo-history-management: backlog
+  epic-11-retrospective: optional
+
+  # Epic 12: MIDI & External Audio Connectivity (Phase 3) (10 stories)
+  epic-12: backlog
+  12-1-per-track-midi-output-configuration: backlog
+  12-2-bluetooth-midi-output: backlog
+  12-3-usb-midi-output-lightning-usb-c: backlog
+  12-4-usb-audio-output-to-external-interfaces: backlog
+  12-5-midi-input-from-external-controllers: backlog
+  12-6-bluetooth-midi-input-for-live-performance: backlog
+  12-7-midi-clock-send-receive-for-tempo-sync: backlog
+  12-8-midi-transport-control-start-stop-continue: backlog
+  12-9-ableton-link-network-based-tempo-sync: backlog
+  12-10-clock-source-selection-internal-midi-link: backlog
+  epic-12-retrospective: optional
+
+  # Epic 13: Live Performance & Hardware Integration (Phase 3) (15 stories)
+  epic-13: backlog
+  13-1-midi-file-export-for-daw-integration: backlog
+  13-2-project-save-load-with-full-song-state: backlog
+  13-3-audio-bounce-to-wav-mp3: backlog
+  13-4-hardware-controller-support-erae-touch-2-launchpad-push: backlog
+  13-5-mpe-support-for-expressive-control: backlog
+  13-6-scene-launching-and-pattern-switching: backlog
+  13-7-performance-mode-with-accidental-clear-protection: backlog
+  13-8-wled-wifi-led-strip-control: backlog
+  13-9-sacn-art-net-network-led-panel-control: backlog
+  13-10-dmx-lighting-control-for-stage-fixtures: backlog
+  13-11-instrument-led-guides-physical-instrument-integration: backlog
+  13-12-protocol-support-configuration-wled-sacn-art-net-dmx: backlog
+  13-13-expanded-synthesis-multiple-oscillators-filters-effects: backlog
+  13-14-audio-input-for-sampling-custom-sounds: backlog
+  13-15-per-track-sound-design-customization: backlog
+  epic-13-retrospective: optional
