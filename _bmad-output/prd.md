@@ -31,7 +31,7 @@ The product targets a spectrum from complete beginners intimidated by traditiona
 **Implementation Strategy:**
 - **Phase 1 (MVP):** Web app at `pixelboop.audiolux.app`, integrated with jam.audiolux.app tech stack for rapid user testing and feedback validation
 - **Phase 2:** iOS native app with <10ms audio latency, $0.99 App Store release to validate market demand
-- **Phase 3 (Kickstarter potential):** Deep audio engineering with tight latency, MIDI I/O, hardware controller integration (Erae Touch 2), and live performance capabilities
+- **Phase 3 (Kickstarter potential):** MIDI output per track (trigger external synths), USB/Bluetooth MIDI I/O, USB audio output, hardware controller integration (Erae Touch 2, Launchpad), song/pattern export, and live performance capabilities
 - **Marketing Hub:** `www.pixelboop.com` landing page directing to both iOS App Store and Audiolux web version
 
 **Audiolux Framework Integration:**
@@ -59,7 +59,7 @@ PixelBoop succeeds across multiple user dimensions:
 
 **Market Positioning:** PixelBoop occupies the white space between "toy apps" (too simple, no depth) and "professional DAWs" (overwhelming, desktop-focused). It's **serious creative capability packaged in playful discovery** - constraint-driven music making that rewards exploration.
 
-**Validation Strategy:** $0.99 iOS MVP to test market resonance. If sales reach validation threshold, launch Kickstarter for deep development: professional audio latency (<10ms), MIDI I/O integration, hardware controller support, and expanded synthesis engine. The current .jsx prototype already demonstrates the core magic - now it's about validating demand before deep investment.
+**Validation Strategy:** $0.99 iOS MVP to test market resonance. If sales reach validation threshold, launch Kickstarter for deep development: per-track MIDI output to external synths, USB/Bluetooth MIDI connectivity, USB audio output, hardware controller support, song export, and expanded synthesis. The current .jsx prototype already demonstrates the core magic - now it's about validating demand before deep investment.
 
 ## Project Classification
 
@@ -136,7 +136,7 @@ PixelBoop succeeds across multiple user dimensions:
 **Phase 3 (Kickstarter Deep Development):**
 - **Funding Goal:** $20k-50k to justify professional audio engineering investment
 - **Backer Validation:** 500+ backers = community believes in deeper version
-- **Stretch Goals:** MIDI I/O, Erae Touch integration, expanded synthesis engine
+- **Stretch Goals:** Per-track MIDI output, Bluetooth MIDI, USB audio output, hardware controller integration (Erae Touch 2, Launchpad), expanded synthesis engine
 
 **Ecosystem Integration:**
 - PixelBoop patterns shareable across Audiolux suite
@@ -291,16 +291,42 @@ PixelBoop succeeds across multiple user dimensions:
 ### Vision (Phase 3: Kickstarter-Funded)
 
 **Deep Development:**
-- MIDI I/O: Export MIDI, sync with external gear
-- Hardware controller integration: Erae Touch 2, Launchpad, Push
-- MPE support for expressive control
-- Live performance mode with scene launching
-- Expanded synthesis: multiple oscillators, filters, effects (reverb, delay)
-- Audio input: sample your own sounds
-- Multi-pattern "song mode" with arrangement
-- Collaborative features: pattern remixing, community challenges
-- Desktop versions (macOS, Windows) with audio routing
+
+**MIDI & External Audio Connectivity (Core Phase 3 Goals):**
+- **MIDI Output per Track:** Each of the 4 tracks (melody, chords, bass, rhythm) can independently output MIDI to external hardware synths, software instruments, or DAWs. Users can trigger their favorite external sounds while using PixelBoop's gesture interface for composition.
+- **Bluetooth MIDI Output:** Wireless MIDI transmission to Bluetooth-capable synths, iOS devices running synth apps (e.g., Moog apps, Korg Gadget), and compatible hardware. Essential for cable-free live performance setups.
+- **USB MIDI Output:** Wired MIDI via Lightning/USB-C for reliable studio connections to audio interfaces, hardware synths, and DAWs.
+- **USB Audio Output:** Direct audio routing to external audio interfaces for professional monitoring and recording. Enables integration with studio setups without relying on device speakers.
+- **MIDI Input (Lower Priority):** Accept MIDI notes from external controllers, keyboards, or trigger pads to place notes on tracks. Enables alternative input methods beyond touch gestures - useful for users with hardware controllers or accessibility needs. Note: Gesture-based input remains primary; MIDI input is supplementary.
+- **Bluetooth MIDI Input:** Receive MIDI from wireless controllers for live performance flexibility.
+
+**UX Challenge:** All MIDI/audio configuration must be achievable through the pixel-only interface. This requires creative solutions - potentially using the song overview row (22-23) or dedicated configuration patterns accessible via gesture combinations. No external settings screens.
+
+**Pattern & Song Export:**
+- **MIDI File Export:** Export patterns/songs as standard MIDI files for import into any DAW
+- **Project Save/Load:** Full song state persistence including all tracks, sections, and arrangements
+- **Audio Bounce:** Render patterns to WAV/MP3 for sharing (internal synth sounds)
+- **Pattern Sharing:** JSON format for PixelBoop-to-PixelBoop pattern exchange
+
+**Hardware Controller Integration:**
+- Erae Touch 2, Launchpad, Push - bidirectional control
+- MPE support for expressive control (pressure, slide)
+- Controller mapping configuration (pixel-UI based)
+
+**Live Performance Features:**
+- Scene launching and pattern switching
 - Ableton Link sync integration
+- Clock source selection (internal/external MIDI clock)
+- Performance mode with accidental-clear protection
+
+**Expanded Synthesis:**
+- Multiple oscillators, filters, effects (reverb, delay)
+- Audio input: sample your own sounds
+- Per-track sound design
+
+**Platform Expansion:**
+- Desktop versions (macOS, Windows) with audio routing
+- Potential Android native (if market warrants)
 
 **Educational Vision (Audiolux Framework Evolution):**
 - Guided "discovery journeys" teaching music concepts
@@ -469,7 +495,7 @@ Phase 1 web app at pixelboop.audiolux.app tests market resonance through engagem
 $0.99 price point tests willingness-to-pay. Target: 500 sales in first month proves users value it enough to spend money (low barrier but signals commitment). 4+ star ratings confirm experiential satisfaction beyond novelty.
 
 **Kickstarter Decision Point:**
-2,000+ iOS sales OR strong community engagement triggers Phase 3 fundraising. This validates that the innovation resonates beyond early adopters and justifies deeper development investment (MIDI I/O, hardware integration, expanded synthesis).
+2,000+ iOS sales OR strong community engagement triggers Phase 3 fundraising. This validates that the innovation resonates beyond early adopters and justifies deeper development investment (per-track MIDI output to external synths, USB/Bluetooth MIDI, USB audio output, hardware controller integration, song export).
 
 ### Risk Mitigation
 
