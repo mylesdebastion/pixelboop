@@ -84,6 +84,16 @@ enum TooltipKey: String {
     case lenDown = "lenDown"
     case clearAll = "clearAll"
 
+    // Track control tooltips
+    case muteMelody = "muteMelody"
+    case muteChords = "muteChords"
+    case muteBass = "muteBass"
+    case muteRhythm = "muteRhythm"
+    case soloMelody = "soloMelody"
+    case soloChords = "soloChords"
+    case soloBass = "soloBass"
+    case soloRhythm = "soloRhythm"
+
     // Gesture tooltips
     case gestureTap = "gesture_tap"
     case gestureAccent = "gesture_accent"
@@ -117,6 +127,14 @@ enum TooltipKey: String {
         case .lenUp: return "LEN +"
         case .lenDown: return "LEN -"
         case .clearAll: return "CLEAR!"
+        case .muteMelody: return "MUTE MELODY"
+        case .muteChords: return "MUTE CHORDS"
+        case .muteBass: return "MUTE BASS"
+        case .muteRhythm: return "MUTE RHYTHM"
+        case .soloMelody: return "SOLO MELODY"
+        case .soloChords: return "SOLO CHORDS"
+        case .soloBass: return "SOLO BASS"
+        case .soloRhythm: return "SOLO RHYTHM"
         case .gestureTap: return "TAP"
         case .gestureAccent: return "ACCENT!"
         case .gestureArpeggio: return "ARPEGGIO"

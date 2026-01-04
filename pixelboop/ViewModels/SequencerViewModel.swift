@@ -447,12 +447,30 @@ class SequencerViewModel: ObservableObject {
             newState.muted[track]?.toggle()
         }
         muteState = newState  // Reassign to trigger @Published
+
+        // Show tooltip
+        let tooltipKey: TooltipKey = switch track {
+        case .melody: .muteMelody
+        case .chords: .muteChords
+        case .bass: .muteBass
+        case .rhythm: .muteRhythm
+        }
+        showTooltip(tooltipKey)
     }
 
     func toggleSolo(_ track: TrackType) {
         var newState = muteState
         newState.soloed = newState.soloed == track ? nil : track
         muteState = newState  // Reassign to trigger @Published
+
+        // Show tooltip
+        let tooltipKey: TooltipKey = switch track {
+        case .melody: .soloMelody
+        case .chords: .soloChords
+        case .bass: .soloBass
+        case .rhythm: .soloRhythm
+        }
+        showTooltip(tooltipKey)
     }
 
     // MARK: - Pattern Control
