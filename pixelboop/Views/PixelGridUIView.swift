@@ -8,6 +8,32 @@
 
 import UIKit
 
+// MARK: - Colors
+
+struct AppColors {
+    // Note colors - chromatic wheel (12 notes)
+    static let noteColors: [UIColor] = [
+        UIColor(red: 1.0, green: 0.0, blue: 0.0, alpha: 1.0),      // 0: C  - Red
+        UIColor(red: 1.0, green: 0.27, blue: 0.0, alpha: 1.0),     // 1: C# - Orange
+        UIColor(red: 1.0, green: 0.55, blue: 0.0, alpha: 1.0),     // 2: D  - Dark Orange
+        UIColor(red: 1.0, green: 0.78, blue: 0.0, alpha: 1.0),     // 3: D# - Yellow-Orange
+        UIColor(red: 1.0, green: 1.0, blue: 0.0, alpha: 1.0),      // 4: E  - Yellow
+        UIColor(red: 0.6, green: 0.8, blue: 0.2, alpha: 1.0),      // 5: F  - Yellow-Green
+        UIColor(red: 0.0, green: 1.0, blue: 0.0, alpha: 1.0),      // 6: F# - Green
+        UIColor(red: 0.0, green: 1.0, blue: 0.67, alpha: 1.0),     // 7: G  - Cyan-Green
+        UIColor(red: 0.0, green: 1.0, blue: 1.0, alpha: 1.0),      // 8: G# - Cyan
+        UIColor(red: 0.0, green: 0.67, blue: 1.0, alpha: 1.0),     // 9: A  - Sky Blue
+        UIColor(red: 0.0, green: 0.33, blue: 1.0, alpha: 1.0),     // 10: A# - Blue
+        UIColor(red: 0.54, green: 0.17, blue: 0.89, alpha: 1.0)    // 11: B  - Purple
+    ]
+
+    static func colorForPitch(_ pitch: Int) -> UIColor {
+        let normalizedPitch = pitch % 12
+        let index = normalizedPitch >= 0 ? normalizedPitch : normalizedPitch + 12
+        return noteColors[index]
+    }
+}
+
 /// UIKit view that renders the 44×24 pixel grid using CoreGraphics
 /// Grid is a 2D array of colored cells - THE GRID IS THE DISPLAY
 /// Row 0 = Controls, Rows 1-23 = Sequencer notes
@@ -28,28 +54,12 @@ class PixelGridUIView: UIView {
 
     // THE GRID - 2D array of cell colors (like an LED matrix)
     // grid[col][row] = color for that cell
-    private var grid: [[UIColor?]] = Array(repeating: Array(repeating: nil, count: 24), count: 44)
+    private var grid: [[UIColor?]] = Array(repeating: Array(repeating: nil, count: GridConstants.rows), count: GridConstants.columns)
 
     // ViewModel reference for Row 0 controls
     private weak var sequencerViewModel: SequencerViewModel?
 
-    // MARK: - Color Constants (from prototype)
-
-    // Note colors - chromatic wheel (12 notes)
-    private let NOTE_COLORS: [UIColor] = [
-        UIColor(red: 1.0, green: 0.0, blue: 0.0, alpha: 1.0),      // 0: C - Red
-        UIColor(red: 1.0, green: 0.27, blue: 0.0, alpha: 1.0),     // 1: C# - Orange
-        UIColor(red: 1.0, green: 0.55, blue: 0.0, alpha: 1.0),     // 2: D - Dark Orange
-        UIColor(red: 1.0, green: 0.78, blue: 0.0, alpha: 1.0),     // 3: D# - Yellow-Orange
-        UIColor(red: 1.0, green: 1.0, blue: 0.0, alpha: 1.0),      // 4: E - Yellow
-        UIColor(red: 0.6, green: 0.8, blue: 0.2, alpha: 1.0),      // 5: F - Yellow-Green
-        UIColor(red: 0.0, green: 1.0, blue: 0.0, alpha: 1.0),      // 6: F# - Green
-        UIColor(red: 0.0, green: 1.0, blue: 0.67, alpha: 1.0),     // 7: G - Cyan-Green
-        UIColor(red: 0.0, green: 1.0, blue: 1.0, alpha: 1.0),      // 8: G# - Cyan
-        UIColor(red: 0.0, green: 0.67, blue: 1.0, alpha: 1.0),     // 9: A - Sky Blue
-        UIColor(red: 0.0, green: 0.33, blue: 1.0, alpha: 1.0),     // 10: A# - Blue
-        UIColor(red: 0.54, green: 0.17, blue: 0.89, alpha: 1.0)    // 11: B - Purple
-    ]
+    // MARK: - Color Constants
 
     // Control colors
     private let COLOR_PLAY = UIColor(red: 0.27, green: 1.0, blue: 0.27, alpha: 1.0)  // #44ff44
@@ -89,15 +99,12 @@ class PixelGridUIView: UIView {
 
     private func initializeGrid() {
         // Initialize all cells to default (empty) color
-        let defaultCellColor = UIColor(white: 0.1, alpha: 1.0) // Slightly lighter than background
-        for col in 0..<COLS {
-            for row in 0..<ROWS {
-                grid[col][row] = defaultCellColor
+        // Note: Using nil instead of default color to represent "off" allows background fill
+        for col in 0..<GridConstants.columns {
+            for row in 0..<GridConstants.rows {
+                grid[col][row] = nil // Use nil for empty (shows background color in draw)
             }
         }
-
-        // Row 0 will be set by Row 0 controls (Story 1.3)
-        // For now, just leave it as default
     }
 
     // MARK: - Layout
@@ -109,7 +116,7 @@ class PixelGridUIView: UIView {
     }
 
     private func calculatePixelSize() {
-        // FR102: Responsive sizing for landscape (44 wide × 24 tall)
+        // FR102: Responsive sizing for landscape
         // Minimum margin to keep edge pixels accessible for touch
         let minMargin: CGFloat = 8.0
 
@@ -117,17 +124,15 @@ class PixelGridUIView: UIView {
         let availableHeight = bounds.height - (minMargin * 2)
 
         // Calculate pixel size that fits both dimensions
-        // Total width = COLS * pixelSize + (COLS - 1) * GAP_SIZE
-        // Total height = ROWS * pixelSize + (ROWS - 1) * GAP_SIZE
-        let pixelSizeFromWidth = (availableWidth - CGFloat(COLS - 1) * GAP_SIZE) / CGFloat(COLS)
-        let pixelSizeFromHeight = (availableHeight - CGFloat(ROWS - 1) * GAP_SIZE) / CGFloat(ROWS)
+        let pixelSizeFromWidth = (availableWidth - CGFloat(GridConstants.columns - 1) * GAP_SIZE) / CGFloat(GridConstants.columns)
+        let pixelSizeFromHeight = (availableHeight - CGFloat(GridConstants.rows - 1) * GAP_SIZE) / CGFloat(GridConstants.rows)
 
         // Use smaller dimension to ensure grid fits without cutoff
         pixelSize = floor(min(pixelSizeFromWidth, pixelSizeFromHeight))
 
         // Calculate actual grid dimensions
-        let gridWidth = CGFloat(COLS) * pixelSize + CGFloat(COLS - 1) * GAP_SIZE
-        let gridHeight = CGFloat(ROWS) * pixelSize + CGFloat(ROWS - 1) * GAP_SIZE
+        let gridWidth = CGFloat(GridConstants.columns) * pixelSize + CGFloat(GridConstants.columns - 1) * GAP_SIZE
+        let gridHeight = CGFloat(GridConstants.rows) * pixelSize + CGFloat(GridConstants.rows - 1) * GAP_SIZE
 
         // Center the grid in the available space
         gridOffsetX = floor((bounds.width - gridWidth) / 2.0)
@@ -146,20 +151,24 @@ class PixelGridUIView: UIView {
         // Update Row 0 controls if we have a ViewModel
         if let viewModel = sequencerViewModel {
             renderRow0Controls(viewModel: viewModel)
+            renderMelodyNotes(viewModel: viewModel)
         }
 
-        // Render the grid: 44 columns horizontally (x-axis), 24 rows vertically (y-axis)
-        // Landscape orientation: 44 cells wide × 24 cells tall, centered in view
-        for col in 0..<COLS {
-            for row in 0..<ROWS {
+        // Render the grid
+        for col in 0..<GridConstants.columns {
+            for row in 0..<GridConstants.rows {
                 // Calculate pixel position with centering offset
                 let x = gridOffsetX + CGFloat(col) * (pixelSize + GAP_SIZE)
                 let y = gridOffsetY + CGFloat(row) * (pixelSize + GAP_SIZE)
                 let pixelRect = CGRect(x: x, y: y, width: pixelSize, height: pixelSize)
 
-                // Get cell color from grid array
+                // Get cell color from grid array. If nil, use default cell color (slightly visible)
                 if let cellColor = grid[col][row] {
                     context.setFillColor(cellColor.cgColor)
+                    context.fill(pixelRect)
+                } else {
+                    // Render "off" pixels slightly lighter than background (LED off state)
+                    context.setFillColor(UIColor(white: 0.1, alpha: 1.0).cgColor)
                     context.fill(pixelRect)
                 }
             }
@@ -169,28 +178,23 @@ class PixelGridUIView: UIView {
     // MARK: - Public Interface
 
     /// Set the color of a specific grid cell (like setting an LED in a matrix)
-    /// - Parameters:
-    ///   - col: Column index (0-43, horizontal position in landscape)
-    ///   - row: Row index (0-23, vertical position in landscape)
-    ///   - color: Color to set the cell to (nil = use default)
     func setGridCell(col: Int, row: Int, color: UIColor?) {
-        guard col >= 0 && col < COLS && row >= 0 && row < ROWS else { return }
+        guard col >= 0 && col < GridConstants.columns && row >= 0 && row < GridConstants.rows else { return }
         grid[col][row] = color
         setNeedsDisplay()
     }
 
     /// Get the color of a specific grid cell
     func getGridCell(col: Int, row: Int) -> UIColor? {
-        guard col >= 0 && col < COLS && row >= 0 && row < ROWS else { return nil }
+        guard col >= 0 && col < GridConstants.columns && row >= 0 && row < GridConstants.rows else { return nil }
         return grid[col][row]
     }
 
     /// Clear all grid cells to default color
     func clearGrid() {
-        let defaultCellColor = UIColor(white: 0.1, alpha: 1.0)
-        for col in 0..<COLS {
-            for row in 0..<ROWS {
-                grid[col][row] = defaultCellColor
+        for col in 0..<GridConstants.columns {
+            for row in 0..<GridConstants.rows {
+                grid[col][row] = nil
             }
         }
         setNeedsDisplay()
@@ -198,9 +202,9 @@ class PixelGridUIView: UIView {
 
     /// Returns the intrinsic content size based on pixel size and grid dimensions
     override var intrinsicContentSize: CGSize {
-        // Landscape: 44 wide × 24 tall, centered with calculated offsets
-        let width = (gridOffsetX * 2) + CGFloat(COLS) * pixelSize + CGFloat(COLS - 1) * GAP_SIZE
-        let height = (gridOffsetY * 2) + CGFloat(ROWS) * pixelSize + CGFloat(ROWS - 1) * GAP_SIZE
+        // Landscape: centered with calculated offsets
+        let width = (gridOffsetX * 2) + CGFloat(GridConstants.columns) * pixelSize + CGFloat(GridConstants.columns - 1) * GAP_SIZE
+        let height = (gridOffsetY * 2) + CGFloat(GridConstants.rows) * pixelSize + CGFloat(GridConstants.rows - 1) * GAP_SIZE
         return CGSize(width: width, height: height)
     }
 
@@ -217,7 +221,7 @@ class PixelGridUIView: UIView {
         let row = Int(adjustedY / (pixelSize + GAP_SIZE))
 
         // Validate bounds
-        guard col >= 0 && col < COLS && row >= 0 && row < ROWS else {
+        guard col >= 0 && col < GridConstants.columns && row >= 0 && row < GridConstants.rows else {
             return nil
         }
 
@@ -256,20 +260,18 @@ class PixelGridUIView: UIView {
         for noteIndex in 0..<12 {
             let col = 11 + noteIndex
             let isSelected = noteIndex == viewModel.rootNote.rawValue
-            grid[col][row] = isSelected ? NOTE_COLORS[noteIndex] : dimColor(NOTE_COLORS[noteIndex])
+            grid[col][row] = isSelected ? AppColors.noteColors[noteIndex] : dimColor(AppColors.noteColors[noteIndex])
         }
 
         // Ghost toggle (col 24) - bright when enabled, dark when disabled
         grid[24][row] = viewModel.showGhostNotes ? COLOR_GHOST_ENABLED : COLOR_GHOST_DISABLED
 
         // BPM controls (cols 26-28)
-        // For MVP: Show BPM as single color indicator (future: 3x5 pixel font)
         grid[26][row] = COLOR_CONTROL_BUTTON  // BPM down
         grid[27][row] = hslColor(hue: CGFloat(viewModel.bpm), saturation: 0.7, lightness: 0.5)  // BPM display
         grid[28][row] = COLOR_CONTROL_BUTTON  // BPM up
 
         // Pattern length controls (cols 30-32)
-        // For MVP: Show length as single color indicator (future: 3x5 pixel font)
         grid[30][row] = COLOR_CONTROL_BUTTON  // Length down
         grid[31][row] = hslColor(hue: CGFloat(viewModel.patternLength * 8), saturation: 0.7, lightness: 0.5)  // Length display
         grid[32][row] = COLOR_CONTROL_BUTTON  // Length up
@@ -277,6 +279,57 @@ class PixelGridUIView: UIView {
         // Clear button (cols 40-43) - dark red warning color
         for col in 40..<44 {
             grid[col][row] = COLOR_CLEAR
+        }
+    }
+
+    // MARK: - Melody Track Rendering (Story 1.2)
+
+    private func renderMelodyNotes(viewModel: SequencerViewModel) {
+        let track = TrackType.melody
+
+        // 1. CLEAR the melody track area first (Fix for Review Critical #1: Ghost notes)
+        // Melody track uses rows defined in GridConstants
+        for col in 0..<GridConstants.columns {
+            for row in GridConstants.Melody.startRow...GridConstants.Melody.endRow {
+                grid[col][row] = nil // Reset to empty/off state
+            }
+        }
+
+        // 2. Render notes from pattern
+        // Limit loop to pattern length (which defaults to 44 now)
+        for step in 0..<min(GridConstants.columns, viewModel.pattern.length) {
+            for noteIndex in 0..<12 {
+                let velocity = viewModel.pattern.getVelocity(track: track, note: noteIndex, step: step)
+
+                if velocity > 0 {
+                    // Convert note index to row (inverted: note 5 → row 2, note 0 → row 7)
+                    let row = GridConstants.Melody.endRow - noteIndex
+
+                    // Only render if within melody track rows
+                    if row >= GridConstants.Melody.startRow && row <= GridConstants.Melody.endRow {
+                        // Get chromatic color for this note
+                        let noteColor = AppColors.colorForPitch(noteIndex)
+
+                        // Apply alpha based on velocity (1=normal 0xBB, 2=accent full, 3=sustain faded)
+                        let alpha: CGFloat
+                        switch velocity {
+                        case 2:
+                            alpha = 1.0  // Accent - full brightness
+                        case 3:
+                            alpha = 0.6  // Sustain continuation - faded
+                        default:
+                            alpha = 0.73  // Normal note (0xBB / 255 ≈ 0.73)
+                        }
+
+                        // Create color with alpha
+                        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+                        noteColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+                        let finalColor = UIColor(red: r, green: g, blue: b, alpha: alpha)
+
+                        grid[step][row] = finalColor
+                    }
+                }
+            }
         }
     }
 
@@ -288,11 +341,26 @@ class PixelGridUIView: UIView {
         let location = gesture.location(in: self)
         guard let (col, row) = gridCellAtPoint(location) else { return }
 
-        // Only handle Row 0 taps (controls)
-        guard row == 0 else { return }
-
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.prepare()
+
+        // Handle melody track taps (Story 1.2)
+        if row >= GridConstants.Melody.startRow && row <= GridConstants.Melody.endRow {
+            viewModel.toggleNote(col: col, row: row)
+            generator.impactOccurred()
+            setNeedsDisplay()
+
+            // Accessibility Announcement
+            // Convert row to pitch name (simplified for now)
+            // TODO: Use real Note/Pitch formatter
+            let pitchName = "Note"
+            let action = "toggled"
+            UIAccessibility.post(notification: .announcement, argument: "\(action) \(pitchName) at step \(col + 1)")
+            return
+        }
+
+        // Only handle Row 0 taps (controls) below this point
+        guard row == 0 else { return }
 
         // Handle control taps based on column (from prototype lines 924-968)
         switch col {

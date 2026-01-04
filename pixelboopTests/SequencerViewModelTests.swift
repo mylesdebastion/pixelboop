@@ -250,4 +250,186 @@ final class SequencerViewModelTests: XCTestCase {
         XCTAssertTrue(newViewModel.showGhostNotes)
         XCTAssertEqual(newViewModel.patternLength, 32)
     }
+
+    // MARK: - Pattern Model Tests (Story 1.2)
+
+    func test_pattern_initializedEmpty() {
+        XCTAssertEqual(viewModel.pattern.bpm, 120)
+        XCTAssertEqual(viewModel.pattern.scale, "major")
+        XCTAssertEqual(viewModel.pattern.rootNote, "C")
+        XCTAssertEqual(viewModel.pattern.length, 44) // Updated
+
+        // Verify all tracks are empty
+        for track in TrackType.allCases {
+            for note in 0..<12 {
+                for step in 0..<44 { // Updated
+                    XCTAssertEqual(viewModel.pattern.getVelocity(track: track, note: note, step: step), 0)
+                }
+            }
+        }
+    }
+
+    func test_pattern_setVelocity_storesCorrectly() {
+        viewModel.pattern.setVelocity(track: .melody, note: 5, step: 10, velocity: 1)
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: 5, step: 10), 1)
+    }
+
+    func test_pattern_setVelocity_acceptsAllVelocityTypes() {
+        viewModel.pattern.setVelocity(track: .melody, note: 0, step: 0, velocity: 1) // Normal
+        viewModel.pattern.setVelocity(track: .melody, note: 1, step: 1, velocity: 2) // Accent
+        viewModel.pattern.setVelocity(track: .melody, note: 2, step: 2, velocity: 3) // Sustain
+
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: 0, step: 0), 1)
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: 1, step: 1), 2)
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: 2, step: 2), 3)
+    }
+
+    func test_pattern_setVelocity_ignoresOutOfBounds() {
+        viewModel.pattern.setVelocity(track: .melody, note: -1, step: 0, velocity: 1) // Invalid note
+        viewModel.pattern.setVelocity(track: .melody, note: 0, step: -1, velocity: 1) // Invalid step
+        viewModel.pattern.setVelocity(track: .melody, note: 0, step: 45, velocity: 1) // Step beyond length
+        viewModel.pattern.setVelocity(track: .melody, note: 0, step: 0, velocity: 4) // Invalid velocity
+
+        // All should be ignored, pattern remains empty
+        for note in 0..<12 {
+            for step in 0..<44 {
+                XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: note, step: step), 0)
+            }
+        }
+    }
+
+    func test_pattern_clearAll_removesAllNotes() {
+        // Add some notes
+        viewModel.pattern.setVelocity(track: .melody, note: 0, step: 0, velocity: 1)
+        viewModel.pattern.setVelocity(track: .chords, note: 5, step: 10, velocity: 2)
+        viewModel.pattern.setVelocity(track: .bass, note: 3, step: 8, velocity: 1)
+
+        // Clear all
+        viewModel.pattern.clearAll()
+
+        // Verify all tracks are empty
+        for track in TrackType.allCases {
+            for note in 0..<12 {
+                for step in 0..<44 {
+                    XCTAssertEqual(viewModel.pattern.getVelocity(track: track, note: note, step: step), 0)
+                }
+            }
+        }
+    }
+
+    // MARK: - Note Placement Tests (Story 1.2)
+
+    func test_toggleNote_placesNoteOnEmptyGrid() {
+        viewModel.toggleNote(col: 0, row: 2)
+
+        // Should place note at melody track
+        let noteIndex = 7 - 2  // row 2 → note 5
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: noteIndex, step: 0), 1)
+    }
+
+    func test_toggleNote_removesNoteWhenTappedAgain() {
+        viewModel.toggleNote(col: 5, row: 3)
+        let noteIndex = 7 - 3  // row 3 → note 4
+
+        // First tap places note
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: noteIndex, step: 5), 1)
+
+        // Second tap removes note
+        viewModel.toggleNote(col: 5, row: 3)
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: noteIndex, step: 5), 0)
+    }
+
+    func test_toggleNote_replacesNoteAtSameColumn() {
+        // Tap row 2 at column 10
+        viewModel.toggleNote(col: 10, row: 2)
+        let noteIndex1 = 7 - 2  // row 2 → note 5
+
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: noteIndex1, step: 10), 1)
+
+        // Tap row 3 at same column 10 (should replace)
+        viewModel.toggleNote(col: 10, row: 3)
+        let noteIndex2 = 7 - 3  // row 3 → note 4
+
+        // Old note should be gone
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: noteIndex1, step: 10), 0)
+        // New note should be present
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: noteIndex2, step: 10), 1)
+    }
+
+    func test_toggleNote_ignoresRowsOutsideMelodyTrack() {
+        // Row 0 (controls)
+        viewModel.toggleNote(col: 10, row: 0)
+        // Row 1 (step markers)
+        viewModel.toggleNote(col: 10, row: 1)
+        // Row 8 (outside melody track)
+        viewModel.toggleNote(col: 10, row: 8)
+
+        // Verify no notes placed on melody track at col 10
+        for note in 0..<12 {
+            XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: note, step: 10), 0)
+        }
+    }
+
+    func test_toggleNote_ignoresColumnsOutsideGrid() {
+        viewModel.toggleNote(col: -1, row: 3)
+        viewModel.toggleNote(col: 44, row: 3)
+
+        // Verify no notes placed anywhere
+        for note in 0..<12 {
+            for step in 0..<44 {
+                XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: note, step: step), 0)
+            }
+        }
+    }
+
+    func test_toggleNote_correctRowToPitchMapping() {
+        // Row 2 should be highest pitch (note index 5)
+        viewModel.toggleNote(col: 0, row: 2)
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: 5, step: 0), 1)
+
+        // Row 7 should be lowest pitch (note index 0)
+        viewModel.toggleNote(col: 1, row: 7)
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: 0, step: 1), 1)
+
+        // Row 4 should be middle pitch (note index 3)
+        viewModel.toggleNote(col: 2, row: 4)
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: 3, step: 2), 1)
+    }
+
+    func test_clearPattern_removesAllNotes() {
+        // Place some notes
+        viewModel.toggleNote(col: 0, row: 2)
+        viewModel.toggleNote(col: 5, row: 3)
+        viewModel.toggleNote(col: 10, row: 5)
+
+        // Clear pattern
+        viewModel.clearPattern()
+
+        // Verify all tracks are empty
+        for track in TrackType.allCases {
+            for note in 0..<12 {
+                for step in 0..<44 {
+                    XCTAssertEqual(viewModel.pattern.getVelocity(track: track, note: note, step: step), 0)
+                }
+            }
+        }
+    }
+
+    func test_clearPattern_canBeUndone() {
+        // Place notes
+        viewModel.toggleNote(col: 0, row: 2)
+        viewModel.toggleNote(col: 5, row: 3)
+
+        // Clear pattern
+        viewModel.clearPattern()
+
+        // Undo clear
+        viewModel.undo()
+
+        // Notes should be restored
+        let noteIndex1 = 7 - 2
+        let noteIndex2 = 7 - 3
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: noteIndex1, step: 0), 1)
+        XCTAssertEqual(viewModel.pattern.getVelocity(track: .melody, note: noteIndex2, step: 5), 1)
+    }
 }
