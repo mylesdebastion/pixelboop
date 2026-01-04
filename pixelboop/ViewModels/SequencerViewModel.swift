@@ -440,17 +440,19 @@ class SequencerViewModel: ObservableObject {
     // MARK: - Mute/Solo Control (from prototype lines 640-647)
 
     func toggleMute(_ track: TrackType) {
-        if muteState.soloed == track {
-            muteState.soloed = nil
+        var newState = muteState
+        if newState.soloed == track {
+            newState.soloed = nil
         } else {
-            muteState.muted[track]?.toggle()
+            newState.muted[track]?.toggle()
         }
-        objectWillChange.send()
+        muteState = newState  // Reassign to trigger @Published
     }
 
     func toggleSolo(_ track: TrackType) {
-        muteState.soloed = muteState.soloed == track ? nil : track
-        objectWillChange.send()
+        var newState = muteState
+        newState.soloed = newState.soloed == track ? nil : track
+        muteState = newState  // Reassign to trigger @Published
     }
 
     // MARK: - Pattern Control
