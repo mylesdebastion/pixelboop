@@ -237,13 +237,46 @@ std::atomic<T>                // Lock-free only
 - Columns: 44 (col 0-43 = timeline steps)
 - Rows: 24 (row 0-23 = tracks/pitches)
 
-**Orientation-Independent Design (CRITICAL):**
+**Grid Layout & Rendering (PixelGridUIView):**
+- **Orientation:** Landscape-only (44 wide × 24 tall), app locked via AppDelegate
+- **Pixel sizing:** `floor(min(widthBasedSize, heightBasedSize))` - responsive to device
+- **Centering:** Grid centered in view with `gridOffsetX/Y` for equal margins
+- **Minimum margins:** 8px on all sides (keeps edge pixels touchable)
+- **Touch conversion:** Use `gridCellAtPoint(_ point:)` to account for centering offset
+- **Coordinate mapping:** x = col (horizontal), y = row (vertical)
+- **Gap size:** 1px between all pixels
+
+**Layout Algorithm Pattern:**
+```swift
+// 1. Calculate pixel size that fits both dimensions
+pixelSizeFromWidth = (availableWidth - (COLS-1) * GAP) / COLS
+pixelSizeFromHeight = (availableHeight - (ROWS-1) * GAP) / ROWS
+pixelSize = floor(min(pixelSizeFromWidth, pixelSizeFromHeight))
+
+// 2. Center grid in available space
+gridWidth = COLS * pixelSize + (COLS-1) * GAP
+gridHeight = ROWS * pixelSize + (ROWS-1) * GAP
+gridOffsetX = (bounds.width - gridWidth) / 2
+gridOffsetY = (bounds.height - gridHeight) / 2
+
+// 3. Render pixels with offset
+x = gridOffsetX + col * (pixelSize + GAP)
+y = gridOffsetY + row * (pixelSize + GAP)
+
+// 4. Convert touch to grid coordinates
+adjustedX = touchPoint.x - gridOffsetX
+adjustedY = touchPoint.y - gridOffsetY
+col = Int(adjustedX / (pixelSize + GAP))
+row = Int(adjustedY / (pixelSize + GAP))
+```
+
+**Grid Coordinate System (CRITICAL):**
 - ❌ NEVER use device-relative directions (up/down/left/right)
 - ✅ ALWAYS use grid coordinates (col, row)
-- ✅ App works in landscape (primary, like piano) AND portrait
-- ✅ Coordinates stay the same regardless of device orientation
-- ✅ "Horizontal drag" = movement along COLUMN axis
-- ✅ "Vertical drag" = movement along ROW axis
+- ✅ "Horizontal drag" = movement along COLUMN axis (x-axis)
+- ✅ "Vertical drag" = movement along ROW axis (y-axis)
+- ✅ Grid is 44 columns wide (x) × 24 rows tall (y) in landscape
+- Note: App is landscape-only (locked via AppDelegate)
 
 **Gesture Thresholds:**
 - Tap: <300ms
@@ -278,4 +311,4 @@ std::atomic<T>                // Lock-free only
 - Review quarterly for outdated rules
 - Remove rules that become obvious over time
 
-Last Updated: 2026-01-03 (Added UI Rendering Architecture section after Story 1.2 architectural violation)
+Last Updated: 2026-01-03 (Added Grid Layout & Rendering section with responsive sizing, centering, and touch coordinate conversion patterns)

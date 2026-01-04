@@ -15,13 +15,15 @@ class PixelGridUIView: UIView {
 
     // MARK: - Constants
 
-    private let COLS = 44  // Timeline steps (vertical)
-    private let ROWS = 24  // Tracks/pitches (horizontal)
+    private let COLS = 44  // Grid width (44 cells horizontally in landscape)
+    private let ROWS = 24  // Grid height (24 cells vertically in landscape)
     private let GAP_SIZE: CGFloat = 1.0
 
     // MARK: - Properties
 
     private var pixelSize: CGFloat = 10.0
+    private var gridOffsetX: CGFloat = 0.0  // For centering and touch coordinate conversion
+    private var gridOffsetY: CGFloat = 0.0
     private let gridBackgroundColor = UIColor(red: 0x0a/255.0, green: 0x0a/255.0, blue: 0x0a/255.0, alpha: 1.0) // #0a0a0a
 
     // THE GRID - 2D array of cell colors (like an LED matrix)
@@ -69,11 +71,29 @@ class PixelGridUIView: UIView {
     }
 
     private func calculatePixelSize() {
-        // FR102: Vertical Fill Approach - Fill 100% of vertical canvas (landscape-only)
-        // App is locked to landscape, so this only calculates once on initial layout
-        let availableHeight = bounds.height
-        let calculatedSize = floor(availableHeight / CGFloat(COLS))
-        pixelSize = calculatedSize
+        // FR102: Responsive sizing for landscape (44 wide × 24 tall)
+        // Minimum margin to keep edge pixels accessible for touch
+        let minMargin: CGFloat = 8.0
+
+        let availableWidth = bounds.width - (minMargin * 2)
+        let availableHeight = bounds.height - (minMargin * 2)
+
+        // Calculate pixel size that fits both dimensions
+        // Total width = COLS * pixelSize + (COLS - 1) * GAP_SIZE
+        // Total height = ROWS * pixelSize + (ROWS - 1) * GAP_SIZE
+        let pixelSizeFromWidth = (availableWidth - CGFloat(COLS - 1) * GAP_SIZE) / CGFloat(COLS)
+        let pixelSizeFromHeight = (availableHeight - CGFloat(ROWS - 1) * GAP_SIZE) / CGFloat(ROWS)
+
+        // Use smaller dimension to ensure grid fits without cutoff
+        pixelSize = floor(min(pixelSizeFromWidth, pixelSizeFromHeight))
+
+        // Calculate actual grid dimensions
+        let gridWidth = CGFloat(COLS) * pixelSize + CGFloat(COLS - 1) * GAP_SIZE
+        let gridHeight = CGFloat(ROWS) * pixelSize + CGFloat(ROWS - 1) * GAP_SIZE
+
+        // Center the grid in the available space
+        gridOffsetX = floor((bounds.width - gridWidth) / 2.0)
+        gridOffsetY = floor((bounds.height - gridHeight) / 2.0)
     }
 
     // MARK: - Drawing
@@ -85,13 +105,13 @@ class PixelGridUIView: UIView {
         context.setFillColor(gridBackgroundColor.cgColor)
         context.fill(rect)
 
-        // Render the grid by iterating through cells and drawing each one
-        // Grid orientation: 44 columns run VERTICALLY (timeline), 24 rows run HORIZONTALLY (tracks)
+        // Render the grid: 44 columns horizontally (x-axis), 24 rows vertically (y-axis)
+        // Landscape orientation: 44 cells wide × 24 cells tall, centered in view
         for col in 0..<COLS {
             for row in 0..<ROWS {
-                // Calculate pixel position
-                let x = CGFloat(row) * (pixelSize + GAP_SIZE)
-                let y = CGFloat(col) * (pixelSize + GAP_SIZE)
+                // Calculate pixel position with centering offset
+                let x = gridOffsetX + CGFloat(col) * (pixelSize + GAP_SIZE)
+                let y = gridOffsetY + CGFloat(row) * (pixelSize + GAP_SIZE)
                 let pixelRect = CGRect(x: x, y: y, width: pixelSize, height: pixelSize)
 
                 // Get cell color from grid array
@@ -107,8 +127,8 @@ class PixelGridUIView: UIView {
 
     /// Set the color of a specific grid cell (like setting an LED in a matrix)
     /// - Parameters:
-    ///   - col: Column index (0-43, vertical timeline)
-    ///   - row: Row index (0-23, horizontal track)
+    ///   - col: Column index (0-43, horizontal position in landscape)
+    ///   - row: Row index (0-23, vertical position in landscape)
     ///   - color: Color to set the cell to (nil = use default)
     func setGridCell(col: Int, row: Int, color: UIColor?) {
         guard col >= 0 && col < COLS && row >= 0 && row < ROWS else { return }
@@ -135,8 +155,29 @@ class PixelGridUIView: UIView {
 
     /// Returns the intrinsic content size based on pixel size and grid dimensions
     override var intrinsicContentSize: CGSize {
-        let width = CGFloat(ROWS) * pixelSize + CGFloat(ROWS - 1) * GAP_SIZE
-        let height = CGFloat(COLS) * pixelSize + CGFloat(COLS - 1) * GAP_SIZE
+        // Landscape: 44 wide × 24 tall, centered with calculated offsets
+        let width = (gridOffsetX * 2) + CGFloat(COLS) * pixelSize + CGFloat(COLS - 1) * GAP_SIZE
+        let height = (gridOffsetY * 2) + CGFloat(ROWS) * pixelSize + CGFloat(ROWS - 1) * GAP_SIZE
         return CGSize(width: width, height: height)
+    }
+
+    /// Convert touch coordinates to grid cell coordinates
+    /// - Parameter point: Touch point in view coordinates
+    /// - Returns: (col, row) tuple, or nil if outside grid bounds
+    func gridCellAtPoint(_ point: CGPoint) -> (col: Int, row: Int)? {
+        // Adjust for grid offset (centering)
+        let adjustedX = point.x - gridOffsetX
+        let adjustedY = point.y - gridOffsetY
+
+        // Calculate which cell was touched
+        let col = Int(adjustedX / (pixelSize + GAP_SIZE))
+        let row = Int(adjustedY / (pixelSize + GAP_SIZE))
+
+        // Validate bounds
+        guard col >= 0 && col < COLS && row >= 0 && row < ROWS else {
+            return nil
+        }
+
+        return (col, row)
     }
 }

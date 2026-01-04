@@ -200,7 +200,7 @@ First gestures sound really good (musical intelligence). Continued practice enab
 
 ## 8. 44×24 Grid Layout Specification
 
-**Source:** UX Design Specification, Pixel Primitives (lines 888-901); Architecture Document
+**Source:** UX Design Specification, Pixel Primitives (lines 888-901); Architecture Document; PixelGridUIView.swift
 
 ### Grid Structure
 
@@ -216,17 +216,42 @@ Rows 22-23: Pattern overview (section markers)
 Columns 0-43: Timeline steps (44 steps total)
 ```
 
-**Required:**
-- Columns: 44 (col 0-43 = timeline steps)
-- Rows: 24 (row 0-23 = tracks/pitches)
+**Grid Dimensions (Landscape-Oriented):**
+- Columns: 44 (col 0-43 = timeline steps, render horizontally on x-axis)
+- Rows: 24 (row 0-23 = tracks/pitches, render vertically on y-axis)
 - Gap size: 1px between all pixels
-- Pixel size: `floor(availableHeight / 24)` (vertical fill)
 - Background: #0a0a0a (dark)
 
-**Orientation-Independent:**
-- Grid coordinates stay the same regardless of device orientation
-- Works in landscape (primary, like piano) and portrait
-- User physically rotates device; code doesn't handle orientation
+**Responsive Sizing & Centering:**
+- Pixel size: `floor(min(widthBasedSize, heightBasedSize))` - fits both dimensions
+- Minimum margins: 8px on all sides (keeps edge pixels touchable)
+- Grid centered: Calculated offsets center grid in available space
+- Adapts to devices: iPhone, iPad automatically scale while maintaining aspect ratio
+
+**Layout Algorithm:**
+```swift
+// Calculate pixel size from both dimensions
+pixelSizeFromWidth = (availableWidth - (COLS-1) * GAP) / COLS
+pixelSizeFromHeight = (availableHeight - (ROWS-1) * GAP) / ROWS
+pixelSize = floor(min(pixelSizeFromWidth, pixelSizeFromHeight))
+
+// Center grid in available space
+gridWidth = COLS * pixelSize + (COLS-1) * GAP
+gridHeight = ROWS * pixelSize + (ROWS-1) * GAP
+gridOffsetX = (bounds.width - gridWidth) / 2
+gridOffsetY = (bounds.height - gridHeight) / 2
+```
+
+**Touch Coordinate Conversion:**
+- Touch points must account for grid centering offset
+- Helper method: `gridCellAtPoint(_ point: CGPoint) -> (col: Int, row: Int)?`
+- Converts screen coordinates → grid cell coordinates
+- Returns nil if touch is outside grid bounds
+
+**Orientation:**
+- App locked to landscape-only (no orientation changes)
+- Grid always renders 44 wide × 24 tall
+- No layout recalculation or animation on device rotation
 
 ---
 
