@@ -2,8 +2,8 @@
 //  PixelGridUIView.swift
 //  pixelboop
 //
-//  Created by AI Dev Agent on 1/2/26.
-//  Corrected: Grid-cell-based rendering (like LED matrix)
+//  Complete pixel grid rendering matching prototype exactly
+//  44x24 grid with all tracks, controls, and gestures
 //
 
 import UIKit
@@ -11,7 +11,7 @@ import UIKit
 // MARK: - Colors
 
 struct AppColors {
-    // Note colors - chromatic wheel (12 notes)
+    // Note colors - chromatic wheel (from prototype lines 6-10)
     static let noteColors: [UIColor] = [
         UIColor(red: 1.0, green: 0.0, blue: 0.0, alpha: 1.0),      // 0: C  - Red
         UIColor(red: 1.0, green: 0.27, blue: 0.0, alpha: 1.0),     // 1: C# - Orange
@@ -27,52 +27,62 @@ struct AppColors {
         UIColor(red: 0.54, green: 0.17, blue: 0.89, alpha: 1.0)    // 11: B  - Purple
     ]
 
+    // Track colors (from prototype lines 14-16)
+    static let trackColors: [TrackType: UIColor] = [
+        .melody: UIColor(red: 0.97, green: 0.86, blue: 0.44, alpha: 1.0),  // #f7dc6f
+        .chords: UIColor(red: 0.31, green: 0.80, blue: 0.77, alpha: 1.0),  // #4ecdc4
+        .bass: UIColor(red: 0.27, green: 0.72, blue: 0.82, alpha: 1.0),    // #45b7d1
+        .rhythm: UIColor(red: 1.0, green: 0.42, blue: 0.42, alpha: 1.0)    // #ff6b6b
+    ]
+
     static func colorForPitch(_ pitch: Int) -> UIColor {
-        let normalizedPitch = pitch % 12
-        let index = normalizedPitch >= 0 ? normalizedPitch : normalizedPitch + 12
+        let index = ((pitch % 12) + 12) % 12
         return noteColors[index]
     }
 }
 
-/// UIKit view that renders the 44×24 pixel grid using CoreGraphics
-/// Grid is a 2D array of colored cells - THE GRID IS THE DISPLAY
-/// Row 0 = Controls, Rows 1-23 = Sequencer notes
+// MARK: - Pixel Grid UIView
+
 class PixelGridUIView: UIView {
 
     // MARK: - Constants
 
-    private let COLS = 44  // Grid width (44 cells horizontally in landscape)
-    private let ROWS = 24  // Grid height (24 cells vertically in landscape)
+    private let COLS = 44
+    private let ROWS = 24
     private let GAP_SIZE: CGFloat = 1.0
 
     // MARK: - Properties
 
     private var pixelSize: CGFloat = 10.0
-    private var gridOffsetX: CGFloat = 0.0  // For centering and touch coordinate conversion
+    private var gridOffsetX: CGFloat = 0.0
     private var gridOffsetY: CGFloat = 0.0
-    private let gridBackgroundColor = UIColor(red: 0x0a/255.0, green: 0x0a/255.0, blue: 0x0a/255.0, alpha: 1.0) // #0a0a0a
+    private let gridBackgroundColor = UIColor(white: 0.04, alpha: 1.0)  // #0a0a0a
+    private let cellOffColor = UIColor(white: 0.1, alpha: 1.0)
 
-    // THE GRID - 2D array of cell colors (like an LED matrix)
-    // grid[col][row] = color for that cell
-    private var grid: [[UIColor?]] = Array(repeating: Array(repeating: nil, count: GridConstants.rows), count: GridConstants.columns)
+    // Grid state
+    private var grid: [[UIColor?]] = []
 
-    // ViewModel reference for Row 0 controls
-    private weak var sequencerViewModel: SequencerViewModel?
+    // ViewModel reference
+    private weak var viewModel: SequencerViewModel?
 
-    // MARK: - Color Constants
+    // Gesture state
+    private var touchStartPoint: CGPoint?
+    private var touchStartTime: Date?
+    private var lastTapTime: Date = .distantPast
+    private var lastTapLocation: (row: Int, col: Int)?
 
     // Control colors
-    private let COLOR_PLAY = UIColor(red: 0.27, green: 1.0, blue: 0.27, alpha: 1.0)  // #44ff44
-    private let COLOR_STOP = UIColor(red: 1.0, green: 0.27, blue: 0.27, alpha: 1.0)  // #ff4444
-    private let COLOR_SCALE_MAJOR = UIColor(red: 1.0, green: 0.67, blue: 0.0, alpha: 1.0)  // #ffaa00
-    private let COLOR_SCALE_MINOR = UIColor(red: 0.0, green: 0.67, blue: 1.0, alpha: 1.0)  // #00aaff
-    private let COLOR_SCALE_PENTA = UIColor(red: 0.67, green: 0.0, blue: 1.0, alpha: 1.0)  // #aa00ff
-    private let COLOR_ACTIVE = UIColor(red: 0.53, green: 0.53, blue: 0.53, alpha: 1.0)  // #888
-    private let COLOR_INACTIVE = UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)  // #333
-    private let COLOR_GHOST_ENABLED = UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)  // #666
-    private let COLOR_GHOST_DISABLED = UIColor(red: 0.13, green: 0.13, blue: 0.13, alpha: 1.0)  // #222
-    private let COLOR_CONTROL_BUTTON = UIColor(red: 0.27, green: 0.27, blue: 0.27, alpha: 1.0)  // #444
-    private let COLOR_CLEAR = UIColor(red: 0.4, green: 0.13, blue: 0.13, alpha: 1.0)  // #662222
+    private let COLOR_PLAY = UIColor(red: 0.27, green: 1.0, blue: 0.27, alpha: 1.0)
+    private let COLOR_STOP = UIColor(red: 1.0, green: 0.27, blue: 0.27, alpha: 1.0)
+    private let COLOR_SCALE_MAJOR = UIColor(red: 1.0, green: 0.67, blue: 0.0, alpha: 1.0)
+    private let COLOR_SCALE_MINOR = UIColor(red: 0.0, green: 0.67, blue: 1.0, alpha: 1.0)
+    private let COLOR_SCALE_PENTA = UIColor(red: 0.67, green: 0.0, blue: 1.0, alpha: 1.0)
+    private let COLOR_ACTIVE = UIColor(white: 0.53, alpha: 1.0)
+    private let COLOR_INACTIVE = UIColor(white: 0.2, alpha: 1.0)
+    private let COLOR_GHOST_ENABLED = UIColor(white: 0.4, alpha: 1.0)
+    private let COLOR_GHOST_DISABLED = UIColor(white: 0.13, alpha: 1.0)
+    private let COLOR_CONTROL_BUTTON = UIColor(white: 0.27, alpha: 1.0)
+    private let COLOR_CLEAR = UIColor(red: 0.4, green: 0.13, blue: 0.13, alpha: 1.0)
 
     // MARK: - Initialization
 
@@ -89,22 +99,18 @@ class PixelGridUIView: UIView {
     }
 
     private func setupView() {
-        self.backgroundColor = gridBackgroundColor
-        self.isOpaque = true
-
-        // Add tap gesture recognizer for Row 0 controls
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
-        addGestureRecognizer(tapGesture)
+        backgroundColor = gridBackgroundColor
+        isOpaque = true
+        isMultipleTouchEnabled = false
     }
 
     private func initializeGrid() {
-        // Initialize all cells to default (empty) color
-        // Note: Using nil instead of default color to represent "off" allows background fill
-        for col in 0..<GridConstants.columns {
-            for row in 0..<GridConstants.rows {
-                grid[col][row] = nil // Use nil for empty (shows background color in draw)
-            }
-        }
+        grid = Array(repeating: Array(repeating: nil, count: ROWS), count: COLS)
+    }
+
+    func configure(viewModel: SequencerViewModel) {
+        self.viewModel = viewModel
+        setNeedsDisplay()
     }
 
     // MARK: - Layout
@@ -116,25 +122,19 @@ class PixelGridUIView: UIView {
     }
 
     private func calculatePixelSize() {
-        // FR102: Responsive sizing for landscape
-        // Minimum margin to keep edge pixels accessible for touch
         let minMargin: CGFloat = 8.0
 
         let availableWidth = bounds.width - (minMargin * 2)
         let availableHeight = bounds.height - (minMargin * 2)
 
-        // Calculate pixel size that fits both dimensions
-        let pixelSizeFromWidth = (availableWidth - CGFloat(GridConstants.columns - 1) * GAP_SIZE) / CGFloat(GridConstants.columns)
-        let pixelSizeFromHeight = (availableHeight - CGFloat(GridConstants.rows - 1) * GAP_SIZE) / CGFloat(GridConstants.rows)
+        let pixelSizeFromWidth = (availableWidth - CGFloat(COLS - 1) * GAP_SIZE) / CGFloat(COLS)
+        let pixelSizeFromHeight = (availableHeight - CGFloat(ROWS - 1) * GAP_SIZE) / CGFloat(ROWS)
 
-        // Use smaller dimension to ensure grid fits without cutoff
         pixelSize = floor(min(pixelSizeFromWidth, pixelSizeFromHeight))
 
-        // Calculate actual grid dimensions
-        let gridWidth = CGFloat(GridConstants.columns) * pixelSize + CGFloat(GridConstants.columns - 1) * GAP_SIZE
-        let gridHeight = CGFloat(GridConstants.rows) * pixelSize + CGFloat(GridConstants.rows - 1) * GAP_SIZE
+        let gridWidth = CGFloat(COLS) * pixelSize + CGFloat(COLS - 1) * GAP_SIZE
+        let gridHeight = CGFloat(ROWS) * pixelSize + CGFloat(ROWS - 1) * GAP_SIZE
 
-        // Center the grid in the available space
         gridOffsetX = floor((bounds.width - gridWidth) / 2.0)
         gridOffsetY = floor((bounds.height - gridHeight) / 2.0)
     }
@@ -143,298 +143,554 @@ class PixelGridUIView: UIView {
 
     override func draw(_ rect: CGRect) {
         guard let context = UIGraphicsGetCurrentContext() else { return }
+        guard let vm = viewModel else { return }
 
         // Fill background
         context.setFillColor(gridBackgroundColor.cgColor)
         context.fill(rect)
 
-        // Update Row 0 controls if we have a ViewModel
-        if let viewModel = sequencerViewModel {
-            renderRow0Controls(viewModel: viewModel)
-            renderMelodyNotes(viewModel: viewModel)
-        }
+        // Build grid state
+        buildGrid(viewModel: vm)
 
-        // Render the grid
-        for col in 0..<GridConstants.columns {
-            for row in 0..<GridConstants.rows {
-                // Calculate pixel position with centering offset
+        // Render grid
+        for col in 0..<COLS {
+            for row in 0..<ROWS {
                 let x = gridOffsetX + CGFloat(col) * (pixelSize + GAP_SIZE)
                 let y = gridOffsetY + CGFloat(row) * (pixelSize + GAP_SIZE)
                 let pixelRect = CGRect(x: x, y: y, width: pixelSize, height: pixelSize)
 
-                // Get cell color from grid array. If nil, use default cell color (slightly visible)
                 if let cellColor = grid[col][row] {
                     context.setFillColor(cellColor.cgColor)
-                    context.fill(pixelRect)
                 } else {
-                    // Render "off" pixels slightly lighter than background (LED off state)
-                    context.setFillColor(UIColor(white: 0.1, alpha: 1.0).cgColor)
-                    context.fill(pixelRect)
+                    context.setFillColor(cellOffColor.cgColor)
                 }
+                context.fill(pixelRect)
             }
         }
     }
 
-    // MARK: - Public Interface
+    // MARK: - Grid Building (matches prototype getPixelGrid lines 671-922)
 
-    /// Set the color of a specific grid cell (like setting an LED in a matrix)
-    func setGridCell(col: Int, row: Int, color: UIColor?) {
-        guard col >= 0 && col < GridConstants.columns && row >= 0 && row < GridConstants.rows else { return }
-        grid[col][row] = color
-        setNeedsDisplay()
-    }
-
-    /// Get the color of a specific grid cell
-    func getGridCell(col: Int, row: Int) -> UIColor? {
-        guard col >= 0 && col < GridConstants.columns && row >= 0 && row < GridConstants.rows else { return nil }
-        return grid[col][row]
-    }
-
-    /// Clear all grid cells to default color
-    func clearGrid() {
-        for col in 0..<GridConstants.columns {
-            for row in 0..<GridConstants.rows {
+    private func buildGrid(viewModel vm: SequencerViewModel) {
+        // Clear grid
+        for col in 0..<COLS {
+            for row in 0..<ROWS {
                 grid[col][row] = nil
             }
         }
-        setNeedsDisplay()
+
+        // Row 0: Controls (lines 676-713)
+        renderRow0Controls(vm)
+
+        // Row 1: Step markers (lines 716-729)
+        renderRow1StepMarkers(vm)
+
+        // Rows 2-21: Track grids (lines 732-877)
+        renderTracks(vm)
+
+        // Rows 22-23: Overview (lines 879-907)
+        renderOverview(vm)
+
+        // Apply tooltips (lines 909-919)
+        applyTooltips(vm)
+
+        // Apply gesture preview
+        applyGesturePreview(vm)
     }
 
-    /// Returns the intrinsic content size based on pixel size and grid dimensions
-    override var intrinsicContentSize: CGSize {
-        // Landscape: centered with calculated offsets
-        let width = (gridOffsetX * 2) + CGFloat(GridConstants.columns) * pixelSize + CGFloat(GridConstants.columns - 1) * GAP_SIZE
-        let height = (gridOffsetY * 2) + CGFloat(GridConstants.rows) * pixelSize + CGFloat(GridConstants.rows - 1) * GAP_SIZE
-        return CGSize(width: width, height: height)
-    }
+    // MARK: - Row 0: Controls (from prototype lines 676-713)
 
-    /// Convert touch coordinates to grid cell coordinates
-    /// - Parameter point: Touch point in view coordinates
-    /// - Returns: (col, row) tuple, or nil if outside grid bounds
-    func gridCellAtPoint(_ point: CGPoint) -> (col: Int, row: Int)? {
-        // Adjust for grid offset (centering)
-        let adjustedX = point.x - gridOffsetX
-        let adjustedY = point.y - gridOffsetY
-
-        // Calculate which cell was touched
-        let col = Int(adjustedX / (pixelSize + GAP_SIZE))
-        let row = Int(adjustedY / (pixelSize + GAP_SIZE))
-
-        // Validate bounds
-        guard col >= 0 && col < GridConstants.columns && row >= 0 && row < GridConstants.rows else {
-            return nil
-        }
-
-        return (col, row)
-    }
-
-    /// Configure view with SequencerViewModel reference
-    func configure(viewModel: SequencerViewModel) {
-        self.sequencerViewModel = viewModel
-        setNeedsDisplay()
-    }
-
-    // MARK: - Row 0 Control Rendering (from prototype lines 676-713)
-
-    private func renderRow0Controls(viewModel: SequencerViewModel) {
+    private func renderRow0Controls(_ vm: SequencerViewModel) {
         let row = 0
 
-        // Play/Stop button (cols 0-2) - green when stopped, red when playing
-        let playColor = viewModel.isPlaying ? COLOR_STOP : COLOR_PLAY
+        // Play/Stop (cols 0-2)
+        let playColor = vm.isPlaying ? COLOR_STOP : COLOR_PLAY
         for col in 0..<3 {
             grid[col][row] = playColor
         }
 
-        // Undo button (col 4) - gray when available, dark when not
-        grid[4][row] = viewModel.canUndo ? COLOR_ACTIVE : COLOR_INACTIVE
+        // Undo (col 4)
+        grid[4][row] = vm.canUndo ? COLOR_ACTIVE : COLOR_INACTIVE
 
-        // Redo button (col 5) - gray when available, dark when not
-        grid[5][row] = viewModel.canRedo ? COLOR_ACTIVE : COLOR_INACTIVE
+        // Redo (col 5)
+        grid[5][row] = vm.canRedo ? COLOR_ACTIVE : COLOR_INACTIVE
 
-        // Scale selectors (cols 7-9) - highlight selected scale
-        grid[7][row] = viewModel.currentScale == .major ? COLOR_SCALE_MAJOR : dimColor(COLOR_SCALE_MAJOR)
-        grid[8][row] = viewModel.currentScale == .minor ? COLOR_SCALE_MINOR : dimColor(COLOR_SCALE_MINOR)
-        grid[9][row] = viewModel.currentScale == .pentatonic ? COLOR_SCALE_PENTA : dimColor(COLOR_SCALE_PENTA)
+        // Scale selectors (cols 7-9)
+        grid[7][row] = vm.currentScale == .major ? COLOR_SCALE_MAJOR : dimColor(COLOR_SCALE_MAJOR)
+        grid[8][row] = vm.currentScale == .minor ? COLOR_SCALE_MINOR : dimColor(COLOR_SCALE_MINOR)
+        grid[9][row] = vm.currentScale == .pentatonic ? COLOR_SCALE_PENTA : dimColor(COLOR_SCALE_PENTA)
 
-        // Root note selectors (cols 11-22) - 12 chromatic notes
+        // Root note selectors (cols 11-22)
         for noteIndex in 0..<12 {
             let col = 11 + noteIndex
-            let isSelected = noteIndex == viewModel.rootNote.rawValue
+            let isSelected = noteIndex == vm.rootNote.rawValue
             grid[col][row] = isSelected ? AppColors.noteColors[noteIndex] : dimColor(AppColors.noteColors[noteIndex])
         }
 
-        // Ghost toggle (col 24) - bright when enabled, dark when disabled
-        grid[24][row] = viewModel.showGhostNotes ? COLOR_GHOST_ENABLED : COLOR_GHOST_DISABLED
+        // Ghost toggle (col 24)
+        grid[24][row] = vm.showGhostNotes ? COLOR_GHOST_ENABLED : COLOR_GHOST_DISABLED
 
         // BPM controls (cols 26-28)
-        grid[26][row] = COLOR_CONTROL_BUTTON  // BPM down
-        grid[27][row] = hslColor(hue: CGFloat(viewModel.bpm), saturation: 0.7, lightness: 0.5)  // BPM display
-        grid[28][row] = COLOR_CONTROL_BUTTON  // BPM up
+        grid[26][row] = COLOR_CONTROL_BUTTON
+        grid[27][row] = hslColor(hue: CGFloat(vm.bpm), saturation: 0.7, lightness: 0.5)
+        grid[28][row] = COLOR_CONTROL_BUTTON
 
         // Pattern length controls (cols 30-32)
-        grid[30][row] = COLOR_CONTROL_BUTTON  // Length down
-        grid[31][row] = hslColor(hue: CGFloat(viewModel.patternLength * 8), saturation: 0.7, lightness: 0.5)  // Length display
-        grid[32][row] = COLOR_CONTROL_BUTTON  // Length up
+        grid[30][row] = COLOR_CONTROL_BUTTON
+        grid[31][row] = hslColor(hue: CGFloat(vm.patternLength * 8), saturation: 0.7, lightness: 0.5)
+        grid[32][row] = COLOR_CONTROL_BUTTON
 
-        // Clear button (cols 40-43) - dark red warning color
+        // Shake indicator (cols 34-37)
+        let shakeColor = vm.isShaking ?
+            hslColor(hue: CGFloat(360 - vm.shakeDirectionChanges * 60), saturation: 1.0, lightness: 0.5) :
+            UIColor(white: 0.13, alpha: 1.0)
+        for col in 34..<38 {
+            grid[col][row] = shakeColor
+        }
+
+        // Clear button (cols 40-43)
         for col in 40..<44 {
             grid[col][row] = COLOR_CLEAR
         }
     }
 
-    // MARK: - Melody Track Rendering (Story 1.2)
+    // MARK: - Row 1: Step Markers (from prototype lines 716-729)
 
-    private func renderMelodyNotes(viewModel: SequencerViewModel) {
-        let track = TrackType.melody
+    private func renderRow1StepMarkers(_ vm: SequencerViewModel) {
+        let row = 1
 
-        // 1. CLEAR the melody track area first (Fix for Review Critical #1: Ghost notes)
-        // Melody track uses rows defined in GridConstants
-        for col in 0..<GridConstants.columns {
-            for row in GridConstants.Melody.startRow...GridConstants.Melody.endRow {
-                grid[col][row] = nil // Reset to empty/off state
-            }
+        // Left columns (track label area)
+        for col in 0..<4 {
+            grid[col][row] = UIColor(white: 0.13, alpha: 1.0)
         }
 
-        // 2. Render notes from pattern
-        // Limit loop to pattern length (which defaults to 44 now)
-        for step in 0..<min(GridConstants.columns, viewModel.pattern.length) {
-            for noteIndex in 0..<12 {
-                let velocity = viewModel.pattern.getVelocity(track: track, note: noteIndex, step: step)
+        // Step markers
+        for step in 0..<vm.patternLength {
+            let col = GridConstants.columnForStep(step)
+            guard col < COLS else { continue }
 
-                if velocity > 0 {
-                    // Convert note index to row (inverted: note 5 → row 2, note 0 → row 7)
-                    let row = GridConstants.Melody.endRow - noteIndex
+            let isBeat = step % 4 == 0
+            let isBar = step % 8 == 0
+            let isPulse = step == vm.pulseStep
+            let isPlayhead = step == vm.currentStep && vm.isPlaying
 
-                    // Only render if within melody track rows
-                    if row >= GridConstants.Melody.startRow && row <= GridConstants.Melody.endRow {
-                        // Get chromatic color for this note
-                        let noteColor = AppColors.colorForPitch(noteIndex)
+            let color: UIColor
+            if isPulse {
+                color = .white
+            } else if isPlayhead {
+                color = UIColor(white: 0.67, alpha: 1.0)
+            } else if isBar {
+                color = UIColor(white: 0.33, alpha: 1.0)
+            } else if isBeat {
+                color = UIColor(white: 0.2, alpha: 1.0)
+            } else {
+                color = UIColor(white: 0.1, alpha: 1.0)
+            }
 
-                        // Apply alpha based on velocity (1=normal 0xBB, 2=accent full, 3=sustain faded)
-                        let alpha: CGFloat
-                        switch velocity {
-                        case 2:
-                            alpha = 1.0  // Accent - full brightness
-                        case 3:
-                            alpha = 0.6  // Sustain continuation - faded
-                        default:
-                            alpha = 0.73  // Normal note (0xBB / 255 ≈ 0.73)
+            grid[col][row] = color
+        }
+    }
+
+    // MARK: - Tracks (from prototype lines 732-877)
+
+    private func renderTracks(_ vm: SequencerViewModel) {
+        let trackConfigs: [(track: TrackType, startRow: Int, height: Int)] = [
+            (.melody, GridConstants.Melody.startRow, GridConstants.Melody.height),
+            (.chords, GridConstants.Chords.startRow, GridConstants.Chords.height),
+            (.bass, GridConstants.Bass.startRow, GridConstants.Bass.height),
+            (.rhythm, GridConstants.Rhythm.startRow, GridConstants.Rhythm.height)
+        ]
+
+        let scaleNotes = GestureInterpreter.getScaleNotes(scale: vm.currentScale, rootNote: vm.rootNote)
+
+        for config in trackConfigs {
+            let track = config.track
+            let startRow = config.startRow
+            let height = config.height
+
+            let isMuted = vm.muteState.isMuted(track)
+            let isSoloed = vm.muteState.soloed == track
+
+            // Track labels (cols 0-3)
+            for localRow in 0..<height {
+                let row = startRow + localRow
+                let intensity = 1.0 - CGFloat(localRow) / CGFloat(height) * 0.5
+                let trackColor = AppColors.trackColors[track]!
+
+                // Mute button (col 0)
+                var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+                trackColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+                let alpha: CGFloat = isMuted ? 0.2 : (isSoloed ? 1.0 : intensity * 0.8)
+                grid[0][row] = UIColor(red: r, green: g, blue: b, alpha: alpha)
+
+                // Solo button (col 1)
+                grid[1][row] = isSoloed ? .white : UIColor(white: 0.2, alpha: 1.0)
+
+                // Separator (cols 2-3)
+                grid[2][row] = UIColor(white: 0.07, alpha: 1.0)
+                grid[3][row] = nil
+            }
+
+            // Grid cells
+            for localRow in 0..<height {
+                let row = startRow + localRow
+                let noteBase = GridConstants.noteForRow(row, track: track)
+
+                for step in 0..<vm.patternLength {
+                    let col = GridConstants.columnForStep(step)
+                    guard col < COLS else { continue }
+
+                    // Check for notes in this cell (with tolerance for pitch mapping)
+                    let noteStart = max(0, noteBase - 1)
+                    let noteEnd = min(11, noteBase + 1)
+
+                    var velocity = 0
+                    var activeNote = noteBase
+
+                    for n in noteStart...noteEnd {
+                        let v = vm.pattern.getVelocity(track: track, note: n, step: step)
+                        if v > 0 {
+                            velocity = v
+                            activeNote = n
+                            break
                         }
+                    }
 
-                        // Create color with alpha
+                    let isPlayhead = step == vm.currentStep && vm.isPlaying
+                    let inScale = track != .rhythm && GestureInterpreter.isInScale(note: noteBase, scaleNotes: scaleNotes)
+
+                    // Ghost notes from other tracks
+                    var ghostColor: UIColor? = nil
+                    if vm.showGhostNotes && velocity == 0 {
+                        for otherTrack in TrackColors.order {
+                            if otherTrack != track {
+                                for n in noteStart...noteEnd {
+                                    if vm.pattern.getVelocity(track: otherTrack, note: n, step: step) > 0 {
+                                        ghostColor = AppColors.trackColors[otherTrack]?.withAlphaComponent(0.13)
+                                        break
+                                    }
+                                }
+                            }
+                            if ghostColor != nil { break }
+                        }
+                    }
+
+                    // Determine cell color
+                    var color: UIColor? = nil
+
+                    if velocity > 0 {
+                        let noteColor = AppColors.colorForPitch(activeNote)
                         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
                         noteColor.getRed(&r, green: &g, blue: &b, alpha: &a)
-                        let finalColor = UIColor(red: r, green: g, blue: b, alpha: alpha)
 
-                        grid[step][row] = finalColor
+                        switch velocity {
+                        case 2:
+                            // Accent - full brightness
+                            color = noteColor
+                        case 3:
+                            // Sustain continuation - faded
+                            let sustainFade = calculateSustainFade(track: track, note: activeNote, step: step, vm: vm)
+                            color = UIColor(red: r, green: g, blue: b, alpha: sustainFade)
+                        default:
+                            // Normal note - 0.73 alpha (0xBB)
+                            color = UIColor(red: r, green: g, blue: b, alpha: 0.73)
+                        }
+
+                        // Apply mute dimming
+                        if isMuted {
+                            color = color?.withAlphaComponent(0.4)
+                        }
+                    } else if let ghost = ghostColor {
+                        color = ghost
+                    } else if isPlayhead {
+                        color = UIColor(white: 0.1, alpha: 1.0)
+                    } else if step % 8 == 0 {
+                        color = UIColor(white: 0.07, alpha: 1.0)
+                    } else if !inScale && track != .rhythm {
+                        color = UIColor(white: 0.02, alpha: 1.0)
                     }
+
+                    grid[col][row] = color
                 }
             }
         }
     }
 
-    // MARK: - Gesture Handling
+    // MARK: - Calculate Sustain Fade (from prototype lines 793-825)
 
-    @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
-        guard let viewModel = sequencerViewModel else { return }
+    private func calculateSustainFade(track: TrackType, note: Int, step: Int, vm: SequencerViewModel) -> CGFloat {
+        // Find sustain start
+        var sustainStart = step
+        var sustainLength = 1
 
-        let location = gesture.location(in: self)
+        for s in 1..<vm.patternLength {
+            let prevStep = (step - s + vm.patternLength) % vm.patternLength
+            let prevVel = vm.pattern.getVelocity(track: track, note: note, step: prevStep)
+            if prevVel == 3 {
+                sustainStart = prevStep
+                sustainLength += 1
+            } else if prevVel == 1 || prevVel == 2 {
+                sustainStart = prevStep
+                sustainLength += 1
+                break
+            } else {
+                break
+            }
+        }
+
+        // Count forward for total length
+        for s in 1..<vm.patternLength {
+            let nextStep = (step + s) % vm.patternLength
+            if vm.pattern.getVelocity(track: track, note: note, step: nextStep) == 3 {
+                sustainLength += 1
+            } else {
+                break
+            }
+        }
+
+        // Calculate position and fade
+        let positionInSustain = CGFloat((step - sustainStart + vm.patternLength) % vm.patternLength) / CGFloat(sustainLength)
+
+        // ADSR-like fade: hold at ~80% for first 40%, then fade
+        if positionInSustain < 0.4 {
+            return 0.85
+        } else {
+            return max(0.25, 1.0 - positionInSustain * 0.9)
+        }
+    }
+
+    // MARK: - Overview Rows (from prototype lines 879-907)
+
+    private func renderOverview(_ vm: SequencerViewModel) {
+        // Left columns
+        for col in 0..<4 {
+            grid[col][22] = UIColor(white: 0.13, alpha: 1.0)
+            grid[col][23] = UIColor(white: 0.07, alpha: 1.0)
+        }
+
+        // Step overview
+        for step in 0..<vm.patternLength {
+            let col = GridConstants.columnForStep(step)
+            guard col < COLS else { continue }
+
+            var activeTrack: TrackType? = nil
+            var activeNote = 0
+
+            for track in TrackColors.order {
+                guard !vm.muteState.isMuted(track) else { continue }
+
+                for n in 0..<12 {
+                    if vm.pattern.getVelocity(track: track, note: n, step: step) > 0 {
+                        activeTrack = track
+                        activeNote = n
+                        break
+                    }
+                }
+                if activeTrack != nil { break }
+            }
+
+            let isPlayhead = step == vm.currentStep && vm.isPlaying
+
+            // Row 22: Track color
+            if let track = activeTrack {
+                grid[col][22] = AppColors.trackColors[track]
+            } else {
+                grid[col][22] = isPlayhead ? UIColor(white: 0.13, alpha: 1.0) : nil
+            }
+
+            // Row 23: Note color
+            if activeTrack != nil {
+                grid[col][23] = AppColors.colorForPitch(activeNote)
+            } else {
+                grid[col][23] = UIColor(white: 0.02, alpha: 1.0)
+            }
+        }
+    }
+
+    // MARK: - Tooltips (from prototype lines 909-919)
+
+    private func applyTooltips(_ vm: SequencerViewModel) {
+        for pixel in vm.tooltipPixels {
+            guard pixel.row >= 0 && pixel.row < ROWS && pixel.col >= 0 && pixel.col < COLS else { continue }
+
+            let baseColor = grid[pixel.col][pixel.row] ?? cellOffColor
+            grid[pixel.col][pixel.row] = baseColor.blendedWithWhite(amount: pixel.intensity)
+        }
+    }
+
+    // MARK: - Gesture Preview
+
+    private func applyGesturePreview(_ vm: SequencerViewModel) {
+        guard !vm.gesturePreview.isEmpty else { return }
+        guard let startRow = vm.gesturePreview.first.flatMap({ _ in
+            // Get track from gesture
+            nil as Int?  // We need the row from the gesture start, handled differently
+        }) else { return }
+
+        // For each preview note, highlight the corresponding cell
+        for note in vm.gesturePreview {
+            let col = GridConstants.columnForStep(note.step)
+            guard col < COLS else { continue }
+
+            // Find the row for this note - need to map through all tracks
+            // This is a simplification - the gesture preview should include row info
+            // For now, apply a general highlight
+            grid[col][2] = UIColor(white: 1.0, alpha: 0.5)  // Placeholder
+        }
+    }
+
+    // MARK: - Touch Handling
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touch = touches.first else { return }
+        let location = touch.location(in: self)
+
+        touchStartPoint = location
+        touchStartTime = Date()
+
         guard let (col, row) = gridCellAtPoint(location) else { return }
+
+        // Check for double-tap
+        let now = Date()
+        if let lastLoc = lastTapLocation,
+           now.timeIntervalSince(lastTapTime) < 0.3,
+           abs(lastLoc.row - row) <= 1,
+           abs(lastLoc.col - col) <= 1 {
+            // Double-tap detected
+            handleDoubleTap(row: row, col: col)
+            lastTapLocation = nil
+            lastTapTime = .distantPast
+            return
+        }
+
+        lastTapLocation = (row, col)
+        lastTapTime = now
+
+        // Handle Row 0 controls immediately
+        if row == 0 {
+            handleControlTap(col: col)
+            return
+        }
+
+        // Start gesture tracking
+        viewModel?.startGesture(row: row, col: col)
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touch = touches.first else { return }
+        let location = touch.location(in: self)
+
+        guard let (col, row) = gridCellAtPoint(location) else { return }
+
+        viewModel?.updateGesture(row: row, col: col)
+        setNeedsDisplay()
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        viewModel?.endGesture()
+
+        // Haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+
+        touchStartPoint = nil
+        touchStartTime = nil
+        setNeedsDisplay()
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        viewModel?.endGesture()
+        touchStartPoint = nil
+        touchStartTime = nil
+        setNeedsDisplay()
+    }
+
+    // MARK: - Double Tap Handling
+
+    private func handleDoubleTap(row: Int, col: Int) {
+        guard let vm = viewModel else { return }
+
+        // Double-tap on non-grid area toggles play
+        guard let track = GridConstants.trackForRow(row) else {
+            vm.togglePlayback()
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.impactOccurred()
+            setNeedsDisplay()
+            return
+        }
+
+        // Double-tap on grid erases step
+        vm.eraseStep(col: col, row: row)
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+        setNeedsDisplay()
+    }
+
+    // MARK: - Control Tap Handling (from prototype lines 924-968)
+
+    private func handleControlTap(col: Int) {
+        guard let vm = viewModel else { return }
 
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.prepare()
 
-        // Handle melody track taps (Story 1.2)
-        if row >= GridConstants.Melody.startRow && row <= GridConstants.Melody.endRow {
-            viewModel.toggleNote(col: col, row: row)
-            generator.impactOccurred()
-            setNeedsDisplay()
-
-            // Accessibility Announcement
-            // Convert row to pitch name (simplified for now)
-            // TODO: Use real Note/Pitch formatter
-            let pitchName = "Note"
-            let action = "toggled"
-            UIAccessibility.post(notification: .announcement, argument: "\(action) \(pitchName) at step \(col + 1)")
-            return
-        }
-
-        // Only handle Row 0 taps (controls) below this point
-        guard row == 0 else { return }
-
-        // Handle control taps based on column (from prototype lines 924-968)
         switch col {
         case 0...2:  // Play/Stop
-            viewModel.togglePlayback()
+            vm.togglePlayback()
             generator.impactOccurred()
-            let announcement = viewModel.isPlaying ? "Pattern playing" : "Pattern stopped"
-            UIAccessibility.post(notification: .announcement, argument: announcement)
 
         case 4:  // Undo
-            guard viewModel.canUndo else { return }
-            viewModel.undo()
+            guard vm.canUndo else { return }
+            vm.undo()
             generator.impactOccurred()
-            UIAccessibility.post(notification: .announcement, argument: "Action undone")
 
         case 5:  // Redo
-            guard viewModel.canRedo else { return }
-            viewModel.redo()
+            guard vm.canRedo else { return }
+            vm.redo()
             generator.impactOccurred()
-            UIAccessibility.post(notification: .announcement, argument: "Action redone")
 
         case 7:  // Major scale
-            viewModel.setScale(.major)
+            vm.setScale(.major)
             generator.impactOccurred()
-            UIAccessibility.post(notification: .announcement, argument: "Scale changed to Major")
 
         case 8:  // Minor scale
-            viewModel.setScale(.minor)
+            vm.setScale(.minor)
             generator.impactOccurred()
-            UIAccessibility.post(notification: .announcement, argument: "Scale changed to Minor")
 
         case 9:  // Pentatonic scale
-            viewModel.setScale(.pentatonic)
+            vm.setScale(.pentatonic)
             generator.impactOccurred()
-            UIAccessibility.post(notification: .announcement, argument: "Scale changed to Pentatonic")
 
-        case 11...22:  // Root notes (12 chromatic notes)
+        case 11...22:  // Root notes
             let noteIndex = col - 11
             if let note = Note(rawValue: noteIndex) {
-                viewModel.setRootNote(note)
+                vm.setRootNote(note)
                 generator.impactOccurred()
-                UIAccessibility.post(notification: .announcement, argument: "Root note changed to \(note.displayName)")
             }
 
         case 24:  // Ghost notes toggle
-            viewModel.toggleGhostNotes()
+            vm.toggleGhostNotes()
             generator.impactOccurred()
-            let ghostAnnouncement = viewModel.showGhostNotes ? "Ghost notes enabled" : "Ghost notes disabled"
-            UIAccessibility.post(notification: .announcement, argument: ghostAnnouncement)
 
         case 26:  // BPM down
-            viewModel.adjustBPM(-5)
+            vm.adjustBPM(-5)
             generator.impactOccurred()
-            UIAccessibility.post(notification: .announcement, argument: "BPM decreased to \(viewModel.bpm)")
 
         case 28:  // BPM up
-            viewModel.adjustBPM(5)
+            vm.adjustBPM(5)
             generator.impactOccurred()
-            UIAccessibility.post(notification: .announcement, argument: "BPM increased to \(viewModel.bpm)")
 
         case 30:  // Pattern length down
-            viewModel.adjustPatternLength(-4)
+            vm.adjustPatternLength(-4)
             generator.impactOccurred()
-            UIAccessibility.post(notification: .announcement, argument: "Pattern length decreased to \(viewModel.patternLength)")
 
         case 32:  // Pattern length up
-            viewModel.adjustPatternLength(4)
+            vm.adjustPatternLength(4)
             generator.impactOccurred()
-            UIAccessibility.post(notification: .announcement, argument: "Pattern length increased to \(viewModel.patternLength)")
 
-        case 40...43:  // Clear button
-            viewModel.clearPattern()
+        case 40...43:  // Clear
+            vm.clearPattern()
             generator.impactOccurred()
-            UIAccessibility.post(notification: .announcement, argument: "Pattern cleared")
 
         default:
             break
@@ -443,23 +699,48 @@ class PixelGridUIView: UIView {
         setNeedsDisplay()
     }
 
+    // MARK: - Mute/Solo Handling
+
+    private func handleMuteSoloTap(row: Int, col: Int) {
+        guard let vm = viewModel else { return }
+        guard let track = GridConstants.trackForRow(row) else { return }
+
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+
+        if col == 0 {
+            vm.toggleMute(track)
+        } else if col == 1 {
+            vm.toggleSolo(track)
+        }
+
+        setNeedsDisplay()
+    }
+
     // MARK: - Helper Methods
 
-    /// Dim a color for inactive state (reduce brightness to 30%)
+    private func gridCellAtPoint(_ point: CGPoint) -> (col: Int, row: Int)? {
+        let adjustedX = point.x - gridOffsetX
+        let adjustedY = point.y - gridOffsetY
+
+        let col = Int(adjustedX / (pixelSize + GAP_SIZE))
+        let row = Int(adjustedY / (pixelSize + GAP_SIZE))
+
+        guard col >= 0 && col < COLS && row >= 0 && row < ROWS else {
+            return nil
+        }
+
+        return (col, row)
+    }
+
     private func dimColor(_ color: UIColor) -> UIColor {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         color.getRed(&r, green: &g, blue: &b, alpha: &a)
         return UIColor(red: r * 0.3, green: g * 0.3, blue: b * 0.3, alpha: a)
     }
 
-    /// Convert HSL to UIColor (for BPM/length displays)
     private func hslColor(hue: CGFloat, saturation: CGFloat, lightness: CGFloat) -> UIColor {
-        // Normalize hue to 0-360 range, then to 0-1 for UIColor
         let normalizedHue = (hue.truncatingRemainder(dividingBy: 360)) / 360.0
-
-        // Convert HSL to HSB (UIColor uses HSB)
-        // Lightness = 0.5 means saturation is unchanged
-        // For simplicity, using hue and saturation directly
         return UIColor(hue: normalizedHue, saturation: saturation, brightness: lightness, alpha: 1.0)
     }
 }
