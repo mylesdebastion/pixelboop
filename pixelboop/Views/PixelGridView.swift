@@ -11,22 +11,33 @@ import SwiftUI
 /// Bridges UIKit pixel grid rendering to SwiftUI
 struct PixelGridView: UIViewRepresentable {
 
+    @ObservedObject var viewModel: SequencerViewModel
+
     // MARK: - UIViewRepresentable
 
     func makeUIView(context: Context) -> PixelGridUIView {
         let gridView = PixelGridUIView()
+        gridView.configure(viewModel: viewModel)
         return gridView
     }
 
     func updateUIView(_ uiView: PixelGridUIView, context: Context) {
-        // No dynamic updates needed for this story
-        // Future stories will pass note data here
+        // Trigger redraw when ViewModel state changes
+        uiView.setNeedsDisplay()
     }
 }
 
 // MARK: - Preview
 
 #Preview {
-    PixelGridView()
-        .background(Color.black)
+    struct PreviewWrapper: View {
+        @StateObject var viewModel = SequencerViewModel()
+
+        var body: some View {
+            PixelGridView(viewModel: viewModel)
+                .background(Color.black)
+        }
+    }
+
+    return PreviewWrapper()
 }

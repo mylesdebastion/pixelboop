@@ -46,9 +46,8 @@ story_location: _bmad-output/implementation-artifacts
 development_status:
   # Epic 1: Instant Music Creation (7 stories - expanded 2026-01-03 for Adaptive Menu Column System)
   epic-1: in-progress
-  1-1-render-44x24-pixel-grid-canvas: review
-  1-2-implement-collapsible-menu-column: blocked
-  1-3-migrate-controls-to-menu-system: ready-for-dev
+  1-1-render-44x24-pixel-grid-canvas: done
+  1-3-migrate-controls-to-menu-system: review
   1-4-single-note-placement-with-tap-gesture: ready-for-dev
   1-5-real-time-audio-synthesis-for-melody-notes: ready-for-dev
   1-6-continuous-playback-loop-with-visual-playhead: ready-for-dev
