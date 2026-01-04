@@ -577,6 +577,14 @@ class PixelGridUIView: UIView {
             return
         }
 
+        // Handle mute/solo buttons (cols 0-1 in track rows)
+        if col == 0 || col == 1 {
+            if GridConstants.trackForRow(row) != nil {
+                handleMuteSoloTap(row: row, col: col)
+                return
+            }
+        }
+
         // Start gesture tracking
         viewModel?.startGesture(row: row, col: col)
     }
