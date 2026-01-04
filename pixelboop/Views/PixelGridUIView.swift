@@ -191,11 +191,11 @@ class PixelGridUIView: UIView {
         // Rows 22-23: Overview (lines 879-907)
         renderOverview(vm)
 
-        // Apply tooltips (lines 909-919)
-        applyTooltips(vm)
-
         // Apply gesture preview
         applyGesturePreview(vm)
+
+        // Apply tooltips LAST so they're always visible on top (lines 909-919)
+        applyTooltips(vm)
     }
 
     // MARK: - Row 0: Controls (from prototype lines 676-713)
@@ -513,8 +513,13 @@ class PixelGridUIView: UIView {
         for pixel in vm.tooltipPixels {
             guard pixel.row >= 0 && pixel.row < ROWS && pixel.col >= 0 && pixel.col < COLS else { continue }
 
-            let baseColor = grid[pixel.col][pixel.row] ?? cellOffColor
-            grid[pixel.col][pixel.row] = baseColor.blendedWithWhite(amount: pixel.intensity)
+            // Get the base color, forcing full opacity for consistent blending
+            // (matches prototype which uses baseColor without alpha modifications)
+            let currentColor = grid[pixel.col][pixel.row] ?? cellOffColor
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            currentColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+            let opaqueBase = UIColor(red: r, green: g, blue: b, alpha: 1.0)
+            grid[pixel.col][pixel.row] = opaqueBase.blendedWithWhite(amount: pixel.intensity)
         }
     }
 

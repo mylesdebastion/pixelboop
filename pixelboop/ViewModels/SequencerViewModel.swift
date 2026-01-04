@@ -532,6 +532,7 @@ class SequencerViewModel: ObservableObject {
         // Shake detection
         if detectShake(col: col) {
             clearPattern(fromShake: true)
+            gesturePreview = []  // Clear preview to prevent note application in endGesture
             endGesture()
             return
         }
