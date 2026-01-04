@@ -1,4 +1,4 @@
-# Story 1.3: Implement Row 0 Controls (Pixel-Only)
+# Story 1.3: Refactor Row 0 Controls from Web Prototype
 
 Status: ready-for-dev
 
@@ -8,7 +8,9 @@ Status: ready-for-dev
 
 As a **user**,
 I want **to access playback, tempo, and editing controls through Row 0 of the pixel grid**,
-So that **I can control my musical creation using the same pixel-based interface as note editing**.
+So that **I can control my musical creation using the same proven interface from the web prototype**.
+
+**Context:** This story refactors the existing Row 0 control implementation from `docs/prototype_sequencer.jsx` (lines 676-713) to Swift/UIKit using the DISPLAY architecture. All control layouts, colors, and behaviors are ported from the working prototype.
 
 ---
 
@@ -50,53 +52,127 @@ So that **I can control my musical creation using the same pixel-based interface
 
 ---
 
+## Prototype Reference
+
+**Source:** `docs/prototype_sequencer.jsx` lines 676-713 (getPixelGrid function - Row 0 controls)
+
+**Control Layout (Row 0):**
+```javascript
+// Cols 0-2: Play/Stop (green #44ff44 stopped, red #ff4444 playing)
+grid[0][c] = { color: isPlaying ? '#ff4444' : '#44ff44', action: 'togglePlay' };
+
+// Col 4: Undo (gray #888 available, dark #333 unavailable)
+grid[0][4] = { color: historyIndex > 0 ? '#888' : '#333', action: 'undo' };
+
+// Col 5: Redo (gray #888 available, dark #333 unavailable)
+grid[0][5] = { color: historyIndex < history.length - 1 ? '#888' : '#333', action: 'redo' };
+
+// Col 7-9: Scale selectors (orange #ffaa00 major, blue #00aaff minor, purple #aa00ff penta)
+grid[0][7] = { color: scale === 'major' ? '#ffaa00' : '#442200', action: 'scaleMajor' };
+grid[0][8] = { color: scale === 'minor' ? '#00aaff' : '#002244', action: 'scaleMinor' };
+grid[0][9] = { color: scale === 'penta' ? '#aa00ff' : '#220044', action: 'scalePenta' };
+
+// Cols 11-22: Root note selectors (NOTE_COLORS array, selected=full brightness, unselected=22 opacity)
+grid[0][11 + n] = { color: n === rootNote ? NOTE_COLORS[n] : `${NOTE_COLORS[n]}44` };
+
+// Col 24: Ghost notes toggle (gray #666 enabled, dark #222 disabled)
+grid[0][24] = { color: showGhosts ? '#666' : '#222', action: 'toggleGhosts' };
+
+// Cols 26-28: BPM controls (down button, hue-based display, up button)
+grid[0][26] = { color: '#444', action: 'bpmDown' };
+grid[0][27] = { color: `hsl(${bpm}, 70%, 50%)` }; // Visual BPM indicator
+grid[0][28] = { color: '#444', action: 'bpmUp' };
+
+// Cols 30-32: Pattern length controls (down button, hue-based display, up button)
+grid[0][30] = { color: '#444', action: 'lenDown' };
+grid[0][31] = { color: `hsl(${patternLength * 8}, 70%, 50%)` };
+grid[0][32] = { color: '#444', action: 'lenUp' };
+
+// Cols 34-37: Shake indicator (visual feedback only, reactive color)
+grid[0][c] = { color: isShaking ? `hsl(${360 - shakeDirectionChanges * 60}, 100%, 50%)` : '#222' };
+
+// Cols 40-43: Clear all (dark red #662222, base color #ff4444 for hover/feedback)
+grid[0][c] = { color: '#662222', action: 'clearAll' };
+```
+
+**NOTE_COLORS Reference (from prototype lines 6-10):**
+```javascript
+const NOTE_COLORS = {
+  0: '#ff0000',  1: '#ff4500',  2: '#ff8c00',  3: '#ffc800',
+  4: '#ffff00',  5: '#9acd32',  6: '#00ff00',  7: '#00ffaa',
+  8: '#00ffff',  9: '#00aaff', 10: '#0055ff', 11: '#8a2be2',
+};
+```
+
+**Control Action Handlers (from prototype lines 924-968):**
+- `togglePlay`: Toggle isPlaying state, show tooltip
+- `undo`: Call undo() if historyIndex > 0
+- `redo`: Call redo() if historyIndex < history.length - 1
+- `scaleMajor/Minor/Penta`: Set scale state, show tooltip
+- `root_{n}`: Set rootNote state (0-11)
+- `toggleGhosts`: Toggle showGhosts state
+- `bpmUp/Down`: Adjust BPM ±5, clamp to 60-200 range
+- `lenUp/Down`: Adjust patternLength ±4, clamp to 8-32 range
+- `clearAll`: Clear all tracks, save to history
+
+---
+
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create SequencerViewModel for domain state
+**Refactoring Approach:** Port the prototype's Row 0 control system to Swift using the DISPLAY architecture (setGridCell).
+
+- [ ] Task 1: Create SequencerViewModel (refactor from prototype state management)
   - [ ] Create SequencerViewModel.swift in ViewModels folder
-  - [ ] Add @Published playback state (isPlaying: Bool)
-  - [ ] Add @Published BPM state (bpm: Int = 120, range 40-240)
-  - [ ] Add @Published scale state (currentScale: Scale = .major)
-  - [ ] Add @Published root note state (rootNote: Note = .C)
-  - [ ] Add @Published ghost notes state (showGhostNotes: Bool = true)
-  - [ ] Add @Published pattern length state (patternLength: Int = 16)
-  - [ ] Implement togglePlayback() method
-  - [ ] Implement setBPM(_ value: Int) with validation
-  - [ ] Implement setScale(_ scale: Scale) method
-  - [ ] Implement setRootNote(_ note: Note) method
-  - [ ] Implement toggleGhostNotes() method
-  - [ ] Implement setPatternLength(_ length: Int) with validation (8-32)
-  - [ ] Implement clearPattern() method
-  - [ ] Add UndoManager integration
+  - [ ] Port state from prototype (lines 170-183): isPlaying, bpm, scale, rootNote, showGhosts, patternLength
+  - [ ] Add @Published isPlaying: Bool = false (prototype line 175)
+  - [ ] Add @Published bpm: Int = 120 (prototype line 172, range 60-200)
+  - [ ] Add @Published scale: Scale = .major (prototype line 170, enum: major/minor/penta)
+  - [ ] Add @Published rootNote: Int = 0 (prototype line 171, range 0-11)
+  - [ ] Add @Published showGhosts: Bool = true (prototype line 183)
+  - [ ] Add @Published patternLength: Int = 32 (prototype line 173, range 8-32)
+  - [ ] Port togglePlayback() from prototype togglePlay (lines 419-423)
+  - [ ] Port BPM controls from handleAction (lines 949-954, ±5 increments, clamp 60-200)
+  - [ ] Port scale controls from handleAction (lines 935-943)
+  - [ ] Port root note controls from handleAction (lines 944-945)
+  - [ ] Port ghost toggle from handleAction (lines 946-948)
+  - [ ] Port pattern length controls from handleAction (lines 955-960, ±4 increments, clamp 8-32)
+  - [ ] Port clearPattern from clearAll (lines 406-417)
+  - [ ] Add UndoManager integration (prototype lines 165-166, 378-404)
   - [ ] Write unit tests for SequencerViewModel
 
-- [ ] Task 2: Add Row 0 control rendering to PixelGridUIView
+- [ ] Task 2: Refactor Row 0 control rendering to DISPLAY model
   - [ ] Modify PixelGridUIView to accept SequencerViewModel reference
-  - [ ] Add drawControlsRow0() method in draw(_:)
-  - [ ] Render Play/Stop button at cols 0-2 (green when stopped, red when playing)
-  - [ ] Render Undo button at col 4 (dim when canUndo=false)
-  - [ ] Render Redo button at col 5 (dim when canRedo=false)
-  - [ ] Render Scale selectors at cols 7-9 (major/minor/penta with color coding)
-  - [ ] Render Root note selectors at cols 11-22 (12 chromatic notes with NOTE_COLORS)
-  - [ ] Render Ghost toggle at col 24 (bright when enabled, dim when disabled)
-  - [ ] Render BPM display at cols 26-28 using 3×5 pixel font
-  - [ ] Render Pattern length at cols 30-32 using 3×5 pixel font
-  - [ ] Render Clear button at cols 40-43 (red warning color)
+  - [ ] Create renderRow0Controls() method that uses setGridCell() for each control
+  - [ ] Port Play/Stop rendering (prototype lines 677-680): cols 0-2, green #44ff44 / red #ff4444
+  - [ ] Port Undo/Redo rendering (prototype lines 682-683): cols 4-5, gray #888 / dark #333
+  - [ ] Port Scale selectors (prototype lines 685-687): cols 7-9, orange/blue/purple with dim states
+  - [ ] Port Root note selectors (prototype lines 689-692): cols 11-22, NOTE_COLORS with opacity
+  - [ ] Port Ghost toggle (prototype line 694): col 24, gray #666 / dark #222
+  - [ ] Port BPM controls (prototype lines 696-698): cols 26-28, button #444 + HSL display
+  - [ ] Port Pattern length controls (prototype lines 700-702): cols 30-32, button #444 + HSL display
+  - [ ] Port Shake indicator (prototype lines 705-708): cols 34-37, reactive HSL color
+  - [ ] Port Clear button (prototype lines 711-713): cols 40-43, dark red #662222
+  - [ ] Define NOTE_COLORS constant array matching prototype (lines 6-10)
 
-- [ ] Task 3: Add Row 0 tap gesture handling
-  - [ ] Modify handleTap() to detect Row 0 taps
-  - [ ] Map tap location to control column ranges
-  - [ ] Call viewModel.togglePlayback() for cols 0-2
-  - [ ] Call viewModel.undo() for col 4
-  - [ ] Call viewModel.redo() for col 5
-  - [ ] Call viewModel.setScale() for cols 7-9 based on column
-  - [ ] Call viewModel.setRootNote() for cols 11-22 based on column
-  - [ ] Call viewModel.toggleGhostNotes() for col 24
-  - [ ] Implement BPM increment/decrement for cols 26-28
-  - [ ] Implement pattern length controls for cols 30-32
-  - [ ] Call viewModel.clearPattern() for cols 40-43
-  - [ ] Add haptic feedback for all control taps
-  - [ ] Add VoiceOver announcements for control changes
+- [ ] Task 3: Port Row 0 tap gesture handling from prototype
+  - [ ] Add UITapGestureRecognizer to PixelGridUIView for Row 0
+  - [ ] Implement handleRow0Tap(col:) method
+  - [ ] Port column-to-action mapping from prototype handleAction (lines 924-968)
+  - [ ] Map cols 0-2 → viewModel.togglePlayback() (prototype line 929-930)
+  - [ ] Map col 4 → viewModel.undo() (prototype line 931-932)
+  - [ ] Map col 5 → viewModel.redo() (prototype line 933-934)
+  - [ ] Map col 7 → viewModel.setScale(.major) (prototype line 935-937)
+  - [ ] Map col 8 → viewModel.setScale(.minor) (prototype line 938-940)
+  - [ ] Map col 9 → viewModel.setScale(.penta) (prototype line 941-943)
+  - [ ] Map cols 11-22 → viewModel.setRootNote(n) (prototype line 944-945)
+  - [ ] Map col 24 → viewModel.toggleGhostNotes() (prototype line 946-948)
+  - [ ] Map col 26 → viewModel.adjustBPM(-5) (prototype line 952-954)
+  - [ ] Map col 28 → viewModel.adjustBPM(+5) (prototype line 949-951)
+  - [ ] Map col 30 → viewModel.adjustPatternLength(-4) (prototype line 958-960)
+  - [ ] Map col 32 → viewModel.adjustPatternLength(+4) (prototype line 955-957)
+  - [ ] Map cols 40-43 → viewModel.clearPattern() (prototype line 965-966)
+  - [ ] Add UIImpactFeedbackGenerator haptic feedback for all taps
+  - [ ] Add UIAccessibility.post announcements for VoiceOver
 
 - [ ] Task 4: Port NOTE_COLORS from prototype
   - [ ] Create Color constants for 12 chromatic notes
