@@ -441,6 +441,8 @@ class SequencerViewModel: ObservableObject {
 
     func toggleMute(_ track: TrackType) {
         var newState = muteState
+        let wasMuted = newState.muted[track] ?? false
+
         if newState.soloed == track {
             newState.soloed = nil
         } else {
@@ -448,13 +450,8 @@ class SequencerViewModel: ObservableObject {
         }
         muteState = newState  // Reassign to trigger @Published
 
-        // Show tooltip
-        let tooltipKey: TooltipKey = switch track {
-        case .melody: .muteMelody
-        case .chords: .muteChords
-        case .bass: .muteBass
-        case .rhythm: .muteRhythm
-        }
+        // Show tooltip based on new state
+        let tooltipKey: TooltipKey = wasMuted ? .unmute : .mute
         showTooltip(tooltipKey)
     }
 
@@ -546,6 +543,26 @@ class SequencerViewModel: ObservableObject {
     func startGesture(row: Int, col: Int) {
         gestureStartTime = Date()
         gestureStartPoint = (row, col)
+
+        // Create initial preview for tap (in case there's no drag)
+        guard let track = GridConstants.trackForRow(row),
+              let step = GridConstants.stepForColumn(col) else {
+            return
+        }
+
+        let note = GridConstants.noteForRow(row, track: track)
+        let (notes, gestureType) = GestureInterpreter.interpret(
+            start: GesturePoint(note: note, step: step),
+            end: GesturePoint(note: note, step: step),
+            track: track,
+            velocity: 1,
+            scale: currentScale,
+            rootNote: rootNote,
+            patternLength: patternLength
+        )
+
+        gesturePreview = notes
+        lastGestureType = gestureType
     }
 
     func updateGesture(row: Int, col: Int) {
