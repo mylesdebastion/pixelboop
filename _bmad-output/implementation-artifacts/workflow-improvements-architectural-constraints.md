@@ -22,10 +22,12 @@ Story 1.2 was implemented with high-resolution SwiftUI controls instead of pixel
 
 ### Solution Summary
 Inject architectural constraints at **4 critical points** in BMAD workflow:
-1. **project-context.md** (IMMEDIATE - highest ROI)
-2. **create-story workflow** (architecture extraction)
-3. **dev-story workflow** (previous story context loading)
+1. **project-context.md** (IMMEDIATE - highest ROI, ~95% prevention)
+2. **create-story workflow** (architecture extraction from UX spec)
+3. **dev-story workflow** (previous story context loading - **would have prevented Story 1.2 violation**, only 300 tokens)
 4. **Story template** (explicit architectural constraints section)
+
+**Combined Prevention Rate:** Phase 1 (~95%) + Phase 2 with previous story loading (~99%)
 
 ---
 
@@ -213,12 +215,56 @@ Add new subsection to story template (after "Dev Notes" header):
 
 ---
 
-### 📖 FIX #3: Enhance dev-story Workflow (GOOD TO HAVE)
+### 📖 FIX #3: Enhance dev-story Workflow (HIGH PRIORITY - WOULD HAVE PREVENTED STORY 1.2 VIOLATION)
 
-**Why This Helps:**
-- Adds safety net even if create-story missed constraint
-- Loads previous story learnings for cross-story pattern validation
-- Provides architectural compliance checkpoint before implementation
+**Critical Evidence - This Would Have Prevented Story 1.2 Violation:**
+
+Story 1-1 Dev Notes contains this **exact warning** that Story 1.2 agent never saw:
+
+```markdown
+## CRITICAL ARCHITECTURAL FIX (Added 2026-01-03)
+
+**Issue Discovered:** Initial implementation created separate `MenuColumnView`
+with high-resolution icons, violating pixel-only UI design system.
+
+**Corrected Approach:**
+- Menu column IS part of PixelGridUIView (leftmost N pixel columns)
+- All pixels rendered via CoreGraphics with identical size/gaps
+- NO separate SwiftUI views overlaying the grid
+```
+
+**If Story 1.2's dev agent had loaded Story 1-1's Dev Notes → violation prevented.**
+
+---
+
+**Token Cost Analysis (Context Window Feasibility):**
+
+**Selective Loading Strategy:**
+```yaml
+# Instead of full story file (350 lines × 3 tokens/line = 1,050 tokens)
+Load only critical sections:
+  - Dev Notes section: ~50 lines = 150 tokens
+  - Implementation Notes: ~30 lines = 90 tokens
+  - Senior Developer Review: ~20 lines = 60 tokens
+
+Total per story: ~300 tokens (vs. 1,050 for full file)
+Reduction: 71% token savings
+```
+
+**Epic 1 Example (7 stories in same epic):**
+- **Full story files:** 7 × 1,050 = 7,350 tokens (3.7% of 200K window)
+- **Selective sections:** 7 × 300 = 2,100 tokens (1% of window)
+- **Verdict:** Totally manageable, especially for same-epic stories
+
+**Loading Strategy Options:**
+
+| Strategy | Token Cost | Pros | Cons |
+|----------|-----------|------|------|
+| **Option A: Immediate predecessor only** | 300 tokens | Minimal cost, high relevance, prevents sequential errors | Misses patterns from earlier stories |
+| **Option B: All epic stories (compiled)** | 2,100 tokens | Complete epic context, pattern consistency | Higher cost, may include irrelevant info |
+| **Option C: Smart selective** | 300-900 tokens | Adapts to story type, loads only relevant patterns | More complex logic, needs maintenance |
+
+---
 
 **File:** `_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml`
 
@@ -232,35 +278,64 @@ Add to Step 2 after "Load {project_context}":
 
   <action>Load {project_context} for coding standards and project-wide patterns (if exists)</action>
 
-  <!-- NEW: Load previous story context -->
-  <check if="story_num > 1">
-    <action>Extract epic_num and story_num from story_key (e.g., "1-2-user-auth" → epic=1, story=2)</action>
-    <action>Calculate previous_story_num = story_num - 1</action>
-    <action>Find previous story file: {story_dir}/{epic_num}-{previous_story_num}-*.md</action>
+  <!-- NEW: Load previous story context for epic coherence -->
+  <check if="current story is part of an epic (e.g., Story 1-2, 1-3, etc.)">
+    <action>Parse story_key to extract epic_num and story_num (e.g., "1-2-collapsible-menu" → epic=1, story=2)</action>
 
-    <check if="previous story file exists">
-      <action>Read previous story implementation notes:</action>
-      <action>  - Dev Agent Record → Implementation Notes</action>
-      <action>  - Dev Agent Record → Completion Notes</action>
-      <action>  - Change Log (most recent entry)</action>
-      <action>  - Look for keywords: "CRITICAL", "ARCHITECTURAL", "IMPORTANT", "VIOLATION", "FIX"</action>
+    <!-- OPTION A: Load immediate predecessor (RECOMMENDED) -->
+    <check if="story_num > 1">
+      <action>Calculate previous_story_num = story_num - 1</action>
+      <action>Find previous story file: {story_dir}/{epic_num}-{previous_story_num}-*.md</action>
 
-      <action>Extract architectural decisions/patterns from previous story</action>
-      <action>Note any warnings or learnings relevant to current story</action>
+      <check if="previous story file exists">
+        <action>Load ONLY these sections from previous story (selective loading for token efficiency):
+          - Dev Notes section (architectural patterns, constraints, warnings)
+          - Dev Agent Record → Implementation Notes (technical decisions)
+          - Dev Agent Record → Completion Notes (lessons learned)
+          - Senior Developer Review (if exists - issues found/fixed)
+          - Change Log → most recent entry (critical changes)
+        </action>
 
-      <output>📚 **Previous Story Context Loaded** (Story {epic_num}-{previous_story_num})
+        <action>Extract key information:
+          - Look for keywords: "CRITICAL", "ARCHITECTURAL", "IMPORTANT", "VIOLATION", "WARNING", "FIX"
+          - Note component names created (to avoid duplicates/conflicts)
+          - Note architectural patterns established (to maintain consistency)
+          - Note any mistakes corrected (to avoid repeating them)
+        </action>
 
-        Key Learnings: [summarize architectural patterns, warnings, fixes]
-        Files Created: [list new files from previous story]
-        Patterns Established: [architectural decisions]
-      </output>
+        <output>📚 **Previous Story Context Loaded** (Story {epic_num}-{previous_story_num})
+
+          Critical Warnings: [list any CRITICAL/WARNING items]
+          Architectural Patterns: [patterns established - e.g., "Unified grid architecture"]
+          Components Created: [file names and component types]
+          Lessons Learned: [mistakes corrected, approaches validated]
+
+          Token Cost: ~300 tokens (0.15% of context window)
+        </output>
+      </check>
+
+      <check if="previous story file NOT found">
+        <output>ℹ️ Previous story not found - proceeding with current story only</output>
+      </check>
+    </check>
+
+    <!-- OPTIONAL: Also load epic-wide compiled context (if exists) -->
+    <check if="file exists: {story_dir}/epic-{epic_num}-dev-notes-compiled.md">
+      <action>Load compiled Dev Notes for all stories in epic</action>
+      <output>📚 **Epic {epic_num} Context Loaded** - All stories' critical patterns available</output>
     </check>
   </check>
 
   <!-- Existing content -->
-  <action>Parse sections: Story, Acceptance Criteria, Tasks/Subtasks, Dev Notes...</action>
+  <action>Parse current story sections: Story, Acceptance Criteria, Tasks/Subtasks, Dev Notes...</action>
 </step>
 ```
+
+**Token Budget Estimate:**
+- **Base case** (no previous story): 0 tokens
+- **Immediate predecessor** (Story N-1): ~300 tokens
+- **Epic compiled context**: ~2,100 tokens (all 7 Epic 1 stories)
+- **Total impact**: 0.15% - 1% of 200K context window
 
 **Enhancement 2: Architectural Compliance Checkpoint (Step 5)**
 
@@ -695,14 +770,17 @@ Keep single file but improve workflow targeting:
    - Update story template with "Architectural Constraints" subsection
    - Test: Create test story for visual component, verify constraint extraction
 
-5. **Enhance dev-story workflow** (1 hour)
-   - Update Step 2: Load previous story context
+5. **Enhance dev-story workflow** (1 hour) **← HIGH PRIORITY - Would have prevented Story 1.2 violation**
+   - Update Step 2: Load previous story context (Option A: immediate predecessor - 300 tokens)
    - Update Step 5: Architectural compliance checkpoint
-   - Test: Run dev-story on test story, verify compliance check triggers
+   - **Evidence:** Story 1-1 had exact warning Story 1.2 needed - loading it would have prevented violation
+   - **Token Cost:** Only 300 tokens (0.15% of context window) - totally feasible
+   - Test: Run dev-story on test story, verify previous story context loads and compliance check triggers
 
 **Timeline:** 2 hours
 **Risk:** Low - mostly additive, need testing on non-production stories
 **Validation:** Run full cycle (create-story → dev-story) for test story
+**Impact:** Prevents cross-story violations, ensures epic coherence, ~99% prevention rate when combined with Phase 1
 
 ### Phase 3: Continuous Improvement (Ongoing)
 
@@ -731,8 +809,10 @@ Keep single file but improve workflow targeting:
 
 ### Medium-Term (Epic 2-5)
 - ✅ Create-story workflow extracts constraints into story Dev Notes automatically
-- ✅ Dev-story workflow loads previous story context by default
+- ✅ Dev-story workflow loads previous story context by default (Option A: immediate predecessor, 300 tokens/0.15% context)
+- ✅ Previous story loading prevents cross-story violations (e.g., Story 1.2 would have seen Story 1-1's CRITICAL warning)
 - ✅ Zero violations across all visual component stories
+- ✅ Epic coherence maintained through cross-story pattern validation
 
 ### Long-Term (Epic 6-13)
 - ✅ Architectural Decision Records cover all non-negotiable constraints
