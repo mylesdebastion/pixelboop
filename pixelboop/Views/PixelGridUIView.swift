@@ -64,18 +64,13 @@ class PixelGridUIView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-
-        // Disable animations during layout - orientation changes should not animate
-        // The grid is orientation-agnostic; user just rotates the device
-        UIView.performWithoutAnimation {
-            calculatePixelSize()
-            setNeedsDisplay()
-        }
+        calculatePixelSize()
+        setNeedsDisplay()
     }
 
     private func calculatePixelSize() {
-        // FR102: Vertical Fill Approach - Fill 100% of vertical canvas
-        // Works identically in portrait and landscape orientations
+        // FR102: Vertical Fill Approach - Fill 100% of vertical canvas (landscape-only)
+        // App is locked to landscape, so this only calculates once on initial layout
         let availableHeight = bounds.height
         let calculatedSize = floor(availableHeight / CGFloat(COLS))
         pixelSize = calculatedSize
