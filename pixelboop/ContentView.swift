@@ -13,8 +13,9 @@ struct ContentView: View {
             Color.black
                 .ignoresSafeArea()
 
+            // 44×24 pixel grid (fills 100% of vertical canvas height)
+            // Menu column integrated within PixelGridUIView (pixel-only rendering)
             PixelGridView()
-                .padding()
         }
     }
 }
