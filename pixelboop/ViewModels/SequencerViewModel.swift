@@ -450,8 +450,18 @@ class SequencerViewModel: ObservableObject {
         }
         muteState = newState  // Reassign to trigger @Published
 
-        // Show tooltip based on new state
-        let tooltipKey: TooltipKey = wasMuted ? .unmute : .mute
+        // Show tooltip - track-specific when muting, generic when unmuting
+        let tooltipKey: TooltipKey
+        if wasMuted {
+            tooltipKey = .unmute
+        } else {
+            tooltipKey = switch track {
+            case .melody: .muteMelody
+            case .chords: .muteChords
+            case .bass: .muteBass
+            case .rhythm: .muteRhythm
+            }
+        }
         showTooltip(tooltipKey)
     }
 

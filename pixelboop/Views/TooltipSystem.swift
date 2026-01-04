@@ -85,7 +85,10 @@ enum TooltipKey: String {
     case clearAll = "clearAll"
 
     // Track control tooltips
-    case mute = "mute"
+    case muteMelody = "muteMelody"
+    case muteChords = "muteChords"
+    case muteBass = "muteBass"
+    case muteRhythm = "muteRhythm"
     case unmute = "unmute"
     case soloMelody = "soloMelody"
     case soloChords = "soloChords"
@@ -125,7 +128,10 @@ enum TooltipKey: String {
         case .lenUp: return "LEN +"
         case .lenDown: return "LEN -"
         case .clearAll: return "CLEAR!"
-        case .mute: return "MUTE"
+        case .muteMelody: return "MUTE MELODY"
+        case .muteChords: return "MUTE CHORDS"
+        case .muteBass: return "MUTE BASS"
+        case .muteRhythm: return "MUTE RHYTHM"
         case .unmute: return "UNMUTE"
         case .soloMelody: return "SOLO MELODY"
         case .soloChords: return "SOLO CHORDS"
