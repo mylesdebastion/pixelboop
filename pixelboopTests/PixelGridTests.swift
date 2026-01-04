@@ -96,4 +96,103 @@ final class PixelGridTests: XCTestCase {
             XCTAssertLessThanOrEqual(impliedPixelSize, 20.0, "Pixel size should be at most 20px for device size \(deviceSize)")
         }
     }
+
+    // MARK: - Vertical Fill Tests (FR102)
+
+    func test_verticalFill_pixelSizeCalculatedFromHeight() {
+        // Test that pixel size is calculated from available height to fill 100% of vertical canvas
+        let availableHeight: CGFloat = 600.0
+        let availableWidth: CGFloat = 400.0
+
+        let gridView = PixelGridUIView(frame: CGRect(x: 0, y: 0, width: availableWidth, height: availableHeight))
+        gridView.layoutIfNeeded()
+
+        // Expected pixel size: floor(availableHeight / 24)
+        let expectedPixelSize = floor(availableHeight / 24.0)
+
+        // Grid height should fill 100% of available height
+        // gridHeight = 24 * pixelSize + 23 * gapSize
+        let intrinsicSize = gridView.intrinsicContentSize
+        let expectedGridHeight = 24 * expectedPixelSize + 23 * 1.0
+
+        XCTAssertEqual(intrinsicSize.height, expectedGridHeight, accuracy: 1.0,
+                       "Grid height should fill 100% of vertical canvas (FR102)")
+    }
+
+    func test_verticalFill_gridWidthCalculatedFromPixelSize() {
+        // Test that grid width is calculated based on pixel size from vertical fill
+        let availableHeight: CGFloat = 720.0
+        let availableWidth: CGFloat = 1000.0
+
+        let gridView = PixelGridUIView(frame: CGRect(x: 0, y: 0, width: availableWidth, height: availableHeight))
+        gridView.layoutIfNeeded()
+
+        // Pixel size from vertical fill
+        let expectedPixelSize = floor(availableHeight / 24.0)
+
+        // Grid width: 44 * pixelSize + 43 * gapSize
+        let expectedGridWidth = 44 * expectedPixelSize + 43 * 1.0
+
+        let intrinsicSize = gridView.intrinsicContentSize
+        XCTAssertEqual(intrinsicSize.width, expectedGridWidth, accuracy: 1.0,
+                       "Grid width should be calculated from vertical fill pixel size")
+    }
+
+    func test_verticalFill_leavesHorizontalSpaceForMenu() {
+        // Test that grid width leaves horizontal space for menu column
+        let availableHeight: CGFloat = 600.0
+        let availableWidth: CGFloat = 800.0
+
+        let gridView = PixelGridUIView(frame: CGRect(x: 0, y: 0, width: availableWidth, height: availableHeight))
+        gridView.layoutIfNeeded()
+
+        let intrinsicSize = gridView.intrinsicContentSize
+
+        // Grid width should be less than available width, leaving space for menu
+        XCTAssertLessThan(intrinsicSize.width, availableWidth,
+                          "Grid width should leave horizontal space for menu column (FR103)")
+
+        // Remaining space for menu
+        let menuWidth = availableWidth - intrinsicSize.width
+        XCTAssertGreaterThan(menuWidth, 0, "Menu column should have positive width")
+    }
+
+    // MARK: - Grid Cell Manipulation Tests (DISPLAY Architecture)
+
+    func test_setGridCell_updatesColor() {
+        let gridView = PixelGridUIView(frame: CGRect(x: 0, y: 0, width: 500, height: 300))
+        let testColor = UIColor.red
+
+        gridView.setGridCell(col: 5, row: 10, color: testColor)
+
+        let retrievedColor = gridView.getGridCell(col: 5, row: 10)
+        XCTAssertEqual(retrievedColor, testColor, "Grid cell color should match what was set")
+    }
+
+    func test_getGridCell_returnsNilForOutOfBounds() {
+        let gridView = PixelGridUIView(frame: .zero)
+
+        XCTAssertNil(gridView.getGridCell(col: -1, row: 0), "Negative column should return nil")
+        XCTAssertNil(gridView.getGridCell(col: 44, row: 0), "Column >= 44 should return nil")
+        XCTAssertNil(gridView.getGridCell(col: 0, row: -1), "Negative row should return nil")
+        XCTAssertNil(gridView.getGridCell(col: 0, row: 24), "Row >= 24 should return nil")
+    }
+
+    func test_clearGrid_resetsAllCells() {
+        let gridView = PixelGridUIView(frame: CGRect(x: 0, y: 0, width: 500, height: 300))
+
+        // Set some cells to colors
+        gridView.setGridCell(col: 0, row: 0, color: .red)
+        gridView.setGridCell(col: 10, row: 10, color: .blue)
+        gridView.setGridCell(col: 43, row: 23, color: .green)
+
+        // Clear the grid
+        gridView.clearGrid()
+
+        // Verify all cells are back to default color
+        let defaultColor = UIColor(white: 0.1, alpha: 1.0)
+        XCTAssertEqual(gridView.getGridCell(col: 0, row: 0), defaultColor)
+        XCTAssertEqual(gridView.getGridCell(col: 10, row: 10), defaultColor)
+        XCTAssertEqual(gridView.getGridCell(col: 43, row: 23), defaultColor)
+    }
 }
