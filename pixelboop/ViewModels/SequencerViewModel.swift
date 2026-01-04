@@ -220,7 +220,11 @@ class SequencerViewModel: ObservableObject {
 
     @Published var bpm: Int = 120 {
         didSet {
-            bpm = max(60, min(200, bpm))  // Clamp 60-200 (prototype limits)
+            let clamped = max(60, min(200, bpm))
+            if bpm != clamped {
+                bpm = clamped  // Only re-assign if actually changed (avoids recursion)
+                return
+            }
             pattern.bpm = bpm
             restartPlaybackIfNeeded()
         }
@@ -236,7 +240,11 @@ class SequencerViewModel: ObservableObject {
     @Published var showGhostNotes: Bool = true
     @Published var patternLength: Int = 32 {
         didSet {
-            patternLength = max(8, min(32, patternLength))
+            let clamped = max(8, min(32, patternLength))
+            if patternLength != clamped {
+                patternLength = clamped  // Only re-assign if actually changed (avoids recursion)
+                return
+            }
             pattern.length = patternLength
         }
     }
